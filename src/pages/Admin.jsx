@@ -76,18 +76,18 @@ function ConfirmHost({ children }) {
     <ConfirmCtx.Provider value={ask}>
       {children}
       {st && (
-        <div className="ad-cf" onMouseDown={(e) => { if (e.target === e.currentTarget) done(false) }}>
-          <div className={`ad-cf-box ${st.tone || 'primary'}`} role="alertdialog" aria-modal="true" aria-labelledby="cf-t" aria-describedby="cf-m">
-            <span className="ad-cf-ic">{CF_ICON[st.icon] || CF_ICON.warn}</span>
+        <div className="pnl-cf" onMouseDown={(e) => { if (e.target === e.currentTarget) done(false) }}>
+          <div className={`pnl-cf-box ${st.tone || 'primary'}`} role="alertdialog" aria-modal="true" aria-labelledby="cf-t" aria-describedby="cf-m">
+            <span className="pnl-cf-ic">{CF_ICON[st.icon] || CF_ICON.warn}</span>
             <h3 id="cf-t">{st.title}</h3>
             {st.from && st.to && (
-              <div className="ad-cf-chg"><b>{st.who}</b><span><em>{st.from}</em><i aria-hidden="true">&rarr;</i><em className="to">{st.to}</em></span></div>
+              <div className="pnl-cf-chg"><b>{st.who}</b><span><em>{st.from}</em><i aria-hidden="true">&rarr;</i><em className="to">{st.to}</em></span></div>
             )}
-            {!st.from && st.who && <div className="ad-cf-chg"><b>{st.who}</b></div>}
+            {!st.from && st.who && <div className="pnl-cf-chg"><b>{st.who}</b></div>}
             <p id="cf-m">{st.message}</p>
-            <div className="ad-cf-act">
-              <button type="button" className="ad-btn" ref={noRef} onClick={() => done(false)}>Cancel</button>
-              <button type="button" className={`ad-btn ad-cf-ok ${st.tone === 'danger' ? 'dn' : ''}`} ref={okRef} onClick={() => done(true)}>{st.ok || 'OK'}</button>
+            <div className="pnl-cf-act">
+              <button type="button" className="pnl-btn" ref={noRef} onClick={() => done(false)}>Cancel</button>
+              <button type="button" className={`pnl-btn pnl-cf-ok ${st.tone === 'danger' ? 'dn' : ''}`} ref={okRef} onClick={() => done(true)}>{st.ok || 'OK'}</button>
             </div>
           </div>
         </div>
@@ -116,36 +116,36 @@ function Pager({ page, size, total, onPage, onSize }) {
     else if (nums[nums.length - 1] !== '...') nums.push('...')
   }
   return (
-    <nav className="ad-pg-bar" aria-label="Pages">
-      <span className="ad-pg-info">Showing <b>{from}-{to}</b> of <b>{total}</b></span>
+    <nav className="pnl-pg-bar" aria-label="Pages">
+      <span className="pnl-pg-info">Showing <b>{from}-{to}</b> of <b>{total}</b></span>
       {pages > 1 && (
-        <div className="ad-pg-btns">
+        <div className="pnl-pg-btns">
           <button type="button" disabled={page === 0} onClick={() => onPage(page - 1)} aria-label="Previous page">&lsaquo;</button>
-          {nums.map((n, i) => (n === '...' ? <span key={'e' + i} className="ad-pg-dots">...</span>
+          {nums.map((n, i) => (n === '...' ? <span key={'e' + i} className="pnl-pg-dots">...</span>
             : <button type="button" key={n} className={n === page ? 'on' : ''} aria-current={n === page ? 'page' : undefined} onClick={() => onPage(n)}>{n + 1}</button>))}
           <button type="button" disabled={page >= pages - 1} onClick={() => onPage(page + 1)} aria-label="Next page">&rsaquo;</button>
         </div>
       )}
-      <label className="ad-pg-size"><span>Rows</span><select value={size} onChange={(e) => onSize(+e.target.value)}>{SIZES.map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
+      <label className="pnl-pg-size"><span>Rows</span><select value={size} onChange={(e) => onSize(+e.target.value)}>{SIZES.map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
     </nav>
   )
 }
 
 function AdLoader() {
   return (
-    <main className="ad-load" role="status" aria-live="polite">
-      <div className="ad-load-box">
-        <div className="ad-ring"><i /><img src="/assets/kali-logo-white.svg" alt="" width="26" height="26" /></div>
+    <main className="pnl-load" role="status" aria-live="polite">
+      <div className="pnl-wait">
+        <div className="pnl-ring"><i /><img src="/assets/kali-logo-white.svg" alt="" width="26" height="26" /></div>
         <h2>Shellwise <em>admin</em></h2>
         <p>Checking your access and loading the dashboard</p>
-        <div className="ad-bar"><i /></div>
+        <div className="pnl-bar"><i /></div>
       </div>
     </main>
   )
 }
 
 function Stat({ label, value, sub, tone }) {
-  return <div className={`ad-stat${tone ? ' ' + tone : ''}`}><span>{label}</span><b>{value}</b>{sub && <small>{sub}</small>}</div>
+  return <div className={`pnl-stat${tone ? ' ' + tone : ''}`}><span>{label}</span><b>{value}</b>{sub && <small>{sub}</small>}</div>
 }
 
 const GENDER = { male: 'Male', female: 'Female', other: 'Other', prefer_not: 'Prefer not to say' }
@@ -188,27 +188,27 @@ function UserDrawer({ id, me, onClose, onChanged }) {
   const paid = pays.filter((p) => p.status === 'success').reduce((a, p) => a + (+p.amount_kobo || 0), 0)
   const locked = !u || u.is_admin || u.id === me
   return (
-    <div className="ad-ov" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <aside className="ad-dr" role="dialog" aria-modal="true" aria-label="User details">
-        <header className="ad-drh"><b>User details</b><button className="ad-x" onClick={onClose} aria-label="Close">×</button></header>
-        {err && <p className="ad-err">{err}</p>}
-        {!u ? (!err && <p className="ad-dim">Loading...</p>) : (
+    <div className="pnl-ov" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
+      <aside className="pnl-dr" role="dialog" aria-modal="true" aria-label="User details">
+        <header className="pnl-drh"><b>User details</b><button className="pnl-x" onClick={onClose} aria-label="Close">×</button></header>
+        {err && <p className="pnl-err">{err}</p>}
+        {!u ? (!err && <p className="pnl-dim">Loading...</p>) : (
           <>
-            <div className="ad-dru">
-              <span className="ad-av big">{u.avatar ? <img src={u.avatar} alt="" /> : (u.username || '?').slice(0, 1).toUpperCase()}</span>
+            <div className="pnl-dru">
+              <span className="pnl-av big">{u.avatar ? <img src={u.avatar} alt="" /> : (u.username || '?').slice(0, 1).toUpperCase()}</span>
               <div>
                 <h3>{u.full_name || u.username}</h3>
-                <p className="ad-dim">@{u.username} · {u.email}</p>
-                <div className="ad-tags">{u.is_admin && <em>admin</em>}{u.suspended && <em className="s">suspended</em>}{isOnline(u.last_seen) && <em className="g">online</em>}</div>
+                <p className="pnl-dim">@{u.username} · {u.email}</p>
+                <div className="pnl-tags">{u.is_admin && <em>admin</em>}{u.suspended && <em className="s">suspended</em>}{isOnline(u.last_seen) && <em className="g">online</em>}</div>
               </div>
             </div>
-            <dl className="ad-kv">
+            <dl className="pnl-kv">
               <div><dt>Joined</dt><dd>{day(u.created_at)}</dd></div>
               <div><dt>Last seen</dt><dd>{isOnline(u.last_seen) ? 'Online now' : ago(u.last_seen)}</dd></div>
               <div><dt>Location</dt><dd>{u.location || '-'}</dd></div>
               <div><dt>Gender</dt><dd>{GENDER[u.gender] || '-'}</dd></div>
             </dl>
-            {u.bio && <p className="ad-bio">{u.bio}</p>}
+            {u.bio && <p className="pnl-bio">{u.bio}</p>}
 
             <h4>Plan</h4>
             <select value={u.plan} disabled={busy} onChange={(e) => act({ action: 'set_plan', plan: e.target.value }, planAsk(u, e.target.value))} aria-label="Plan">
@@ -217,7 +217,7 @@ function UserDrawer({ id, me, onClose, onChanged }) {
 
             <h4>Progress</h4>
             {hasProg ? (
-              <div className="ad-pg">
+              <div className="pnl-pg">
                 <div><b>{modules}</b><small>modules done</small></div>
                 <div><b>{st.xp || 0}</b><small>XP</small></div>
                 <div><b>{st.gw || 0}</b><small>games won</small></div>
@@ -225,31 +225,31 @@ function UserDrawer({ id, me, onClose, onChanged }) {
                 <div><b>{st.qc || 0}</b><small>quiz answers right</small></div>
                 <div><b>{(st.b || []).length}</b><small>badges</small></div>
               </div>
-            ) : <p className="ad-dim">No saved progress. Progress is stored online only for Learner and Pro plans; on the Free plan it stays on the learner&apos;s own device.</p>}
+            ) : <p className="pnl-dim">No saved progress. Progress is stored online only for Learner and Pro plans; on the Free plan it stays on the learner&apos;s own device.</p>}
 
             <h4>Payments{pays.length ? ` · ${ngn(paid)} paid` : ''}</h4>
-            {!pays.length ? <p className="ad-dim">No payments yet.</p> : (
-              <div className="ad-pays">
+            {!pays.length ? <p className="pnl-dim">No payments yet.</p> : (
+              <div className="pnl-pays">
                 {pays.map((p) => (
                   <div key={p.reference}>
                     <span>{p.plan} · {p.interval}<small>{day(p.paid_at || p.created_at)}</small></span>
                     <span>{ngn(p.amount_kobo)}</span>
-                    <b className={`ad-pill ${p.status}`}>{p.status}</b>
+                    <b className={`pnl-pill ${p.status}`}>{p.status}</b>
                   </div>
                 ))}
               </div>
             )}
 
             <h4>Account</h4>
-            {locked ? <p className="ad-dim">{u.id === me ? 'This is your own account.' : 'Admin accounts cannot be suspended or deleted here.'}</p> : (
+            {locked ? <p className="pnl-dim">{u.id === me ? 'This is your own account.' : 'Admin accounts cannot be suspended or deleted here.'}</p> : (
               <>
-                <div className="ad-acts l"><button className="ad-btn" disabled={busy} onClick={() => setPwOpen(true)}>Reset password</button>
-                <button className={`ad-btn${u.suspended ? '' : ' warn'}`} disabled={busy} onClick={() => act({ action: 'set_suspended', suspended: !u.suspended }, suspendAsk(u))}>{u.suspended ? 'Restore account' : 'Suspend account'}</button></div>
-                <div className="ad-danger">
+                <div className="pnl-acts l"><button className="pnl-btn" disabled={busy} onClick={() => setPwOpen(true)}>Reset password</button>
+                <button className={`pnl-btn${u.suspended ? '' : ' warn'}`} disabled={busy} onClick={() => act({ action: 'set_suspended', suspended: !u.suspended }, suspendAsk(u))}>{u.suspended ? 'Restore account' : 'Suspend account'}</button></div>
+                <div className="pnl-danger">
                   <p>Delete this account for good, with its payments record and messages. This cannot be undone. Type <b>{u.username}</b> to confirm.</p>
                   <div>
                     <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={u.username} aria-label="Type the username to confirm" autoComplete="off" />
-                    <button className="ad-btn warn" disabled={busy || typed !== u.username} onClick={() => act({ action: 'delete_user' })}>Delete account</button>
+                    <button className="pnl-btn warn" disabled={busy || typed !== u.username} onClick={() => act({ action: 'delete_user' })}>Delete account</button>
                   </div>
                 </div>
               </>
@@ -304,15 +304,15 @@ function RevenueChart({ rows }) {
   const slot = (XR - XL) / n, bw = Math.min(64, slot * 0.72)
   const peak = rows.reduce((b, x, i) => ((+x.n || 0) > (+rows[b].n || 0) ? i : b), 0)
   return (
-    <div className="ad-revw" ref={bx0}>
-      <svg className="ad-revsvg" width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Revenue per month">
+    <div className="pnl-revw" ref={bx0}>
+      <svg className="pnl-revsvg" width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Revenue per month">
         <defs><linearGradient id="adg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#5af3a4" /><stop offset="1" stopColor="#12b765" /></linearGradient></defs>
         {[0, 1, 2, 3, 4].map((i) => {
           const y = Math.round(YB - (i / 4) * (YB - YT)) + 0.5
           return (
             <g key={i}>
-              <line className={i ? 'ad-gd' : 'ad-gb'} shapeRendering="crispEdges" x1={XL - 8} x2={XR} y1={y} y2={y} />
-              <text className="ad-rv-t" x={XL - 16} y={y + 4.5} textAnchor="end">{'₦' + compact((top * i) / 4)}</text>
+              <line className={i ? 'pnl-gd' : 'pnl-gb'} shapeRendering="crispEdges" x1={XL - 8} x2={XR} y1={y} y2={y} />
+              <text className="pnl-rv-t" x={XL - 16} y={y + 4.5} textAnchor="end">{'₦' + compact((top * i) / 4)}</text>
             </g>
           )
         })}
@@ -322,9 +322,9 @@ function RevenueChart({ rows }) {
           const bx = XL + i * slot + (slot - bw) / 2, by = YB - h, r = Math.min(8, h / 2)
           return (
             <g key={x.m}>
-              <path d={`M${bx} ${YB}V${by + r}Q${bx} ${by} ${bx + r} ${by}H${bx + bw - r}Q${bx + bw} ${by} ${bx + bw} ${by + r}V${YB}Z`} fill="url(#adg)" className={v && i === peak ? 'ad-glow' : ''}><title>{`${monY(x.m)}: ${ngn(x.n)}`}</title></path>
-              <text className={'ad-rv-v' + (v ? '' : ' z')} x={bx + bw / 2} y={by - 10} textAnchor="middle">{ngn(x.n)}</text>
-              <text className="ad-rv-m" x={bx + bw / 2} y={YB + 24} textAnchor="middle">{monY(x.m)}</text>
+              <path d={`M${bx} ${YB}V${by + r}Q${bx} ${by} ${bx + r} ${by}H${bx + bw - r}Q${bx + bw} ${by} ${bx + bw} ${by + r}V${YB}Z`} fill="url(#adg)" className={v && i === peak ? 'pnl-glow' : ''}><title>{`${monY(x.m)}: ${ngn(x.n)}`}</title></path>
+              <text className={'pnl-rv-v' + (v ? '' : ' z')} x={bx + bw / 2} y={by - 10} textAnchor="middle">{ngn(x.n)}</text>
+              <text className="pnl-rv-m" x={bx + bw / 2} y={YB + 24} textAnchor="middle">{monY(x.m)}</text>
             </g>
           )
         })}
@@ -336,15 +336,15 @@ function RevenueChart({ rows }) {
 function Donut({ free, paid, learner, pro, suspended }) {
   const tot = Math.max(1, free + paid), R = 76, CI = 2 * Math.PI * R, pct = Math.round((paid / tot) * 100)
   return (
-    <div className="ad-dn">
-      <svg className="ad-dnsvg" viewBox="0 0 220 220" role="img" aria-label={`${paid} paid users and ${free} free users`}>
+    <div className="pnl-dn">
+      <svg className="pnl-dnsvg" viewBox="0 0 220 220" role="img" aria-label={`${paid} paid users and ${free} free users`}>
         <defs><linearGradient id="adp1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#ffd84d" /><stop offset="1" stopColor="#ff9a1f" /></linearGradient></defs>
         <circle cx="110" cy="110" r={R} fill="none" stroke="#2fd37a" strokeWidth="28" />
         {paid > 0 && <circle cx="110" cy="110" r={R} fill="none" stroke="url(#adp1)" strokeWidth="28" strokeDasharray={`${(paid / tot) * CI} ${CI}`} transform="rotate(-90 110 110)" />}
-        <text className="ad-dn-p" x="110" y="116" textAnchor="middle">{pct}%</text>
-        <text className="ad-dn-s" x="110" y="142" textAnchor="middle">paying</text>
+        <text className="pnl-dn-p" x="110" y="116" textAnchor="middle">{pct}%</text>
+        <text className="pnl-dn-s" x="110" y="142" textAnchor="middle">paying</text>
       </svg>
-      <div className="ad-dnl">
+      <div className="pnl-dnl">
         <div><i style={{ background: '#2fd37a' }} /><span>Free</span><b>{free}</b></div>
         <div><i style={{ background: '#ffb020' }} /><span>Paid</span><b>{paid}</b></div>
         <hr />
@@ -364,17 +364,17 @@ function SignupsChart({ sg, signTotal }) {
   const line = pt.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ')
   const dm = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   return (
-    <div className="ad-sgw" ref={bx}>
-      <svg className="ad-svg" width={W} height={H + 20} viewBox={`0 0 ${W} ${H + 20}`} role="img" aria-label={`Signups per day for the last 30 days, ${signTotal} in total`}>
+    <div className="pnl-sgw" ref={bx}>
+      <svg className="pnl-svg" width={W} height={H + 20} viewBox={`0 0 ${W} ${H + 20}`} role="img" aria-label={`Signups per day for the last 30 days, ${signTotal} in total`}>
         <line x1={P} x2={W - P} y1={H - P} y2={H - P} stroke="#ffffff1a" />
         <line x1={P} x2={W - P} y1={TOP} y2={TOP} stroke="#ffffff0d" strokeDasharray="3 4" />
         {pt.length > 1 && <path d={`${line} L${pt[pt.length - 1][0]} ${H - P} L${pt[0][0]} ${H - P} Z`} fill="#2f8cff22" />}
         <path d={line} fill="none" stroke="#2f8cff" strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
         {pt.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="2.6" fill="#2f8cff"><title>{`${dm(sg[i].d)}: ${sg[i].n}`}</title></circle>)}
-        <text className="ad-ax" x={P} y={H + 13}>{sg[0] && dm(sg[0].d)}</text>
-        <text className="ad-ax" x={W / 2} y={H + 13} textAnchor="middle">{sg[15] && dm(sg[15].d)}</text>
-        <text className="ad-ax" x={W - P} y={H + 13} textAnchor="end">{sg.length && dm(sg[sg.length - 1].d)}</text>
-        <text className="ad-ax" x={P} y="10">{smx}</text>
+        <text className="pnl-ax" x={P} y={H + 13}>{sg[0] && dm(sg[0].d)}</text>
+        <text className="pnl-ax" x={W / 2} y={H + 13} textAnchor="middle">{sg[15] && dm(sg[15].d)}</text>
+        <text className="pnl-ax" x={W - P} y={H + 13} textAnchor="end">{sg.length && dm(sg[sg.length - 1].d)}</text>
+        <text className="pnl-ax" x={P} y="10">{smx}</text>
       </svg>
     </div>
   )
@@ -387,18 +387,18 @@ function Charts({ data, c, err, range }) {
   const signTotal = sg.reduce((a, x) => a + (+x.n || 0), 0)
   const rvTotal = rv.reduce((a, x) => a + (+x.n || 0), 0)
   return (
-    <div className="ad-ch2">
-      <section className="ad-card ad-rvc">
-        <header className="ad-chh"><span className="ad-chi g">{KI.bars}</span><div><h3>Revenue per month</h3><p>Last {range} months{c ? ` · ${ngn(rvTotal)} total` : ''}</p></div></header>
-        {err ? <p className="ad-err">{err}</p> : !c ? <p className="ad-dim">Loading chart...</p> : <RevenueChart rows={rv} />}
+    <div className="pnl-ch2">
+      <section className="pnl-card pnl-rvc">
+        <header className="pnl-chh"><span className="pnl-chi g">{KI.bars}</span><div><h3>Revenue per month</h3><p>Last {range} months{c ? ` · ${ngn(rvTotal)} total` : ''}</p></div></header>
+        {err ? <p className="pnl-err">{err}</p> : !c ? <p className="pnl-dim">Loading chart...</p> : <RevenueChart rows={rv} />}
       </section>
-      <section className="ad-card ad-fpc">
-        <header className="ad-chh"><span className="ad-chi v">{KI.pie}</span><div><h3>Free vs paid</h3><p>All users</p></div></header>
+      <section className="pnl-card pnl-fpc">
+        <header className="pnl-chh"><span className="pnl-chi v">{KI.pie}</span><div><h3>Free vs paid</h3><p>All users</p></div></header>
         <Donut free={free} paid={paid} learner={by.learner || 0} pro={by.pro || 0} suspended={+data.suspended || 0} />
       </section>
-      <section className="ad-card ad-sgc">
-        <header className="ad-chh"><span className="ad-chi b">{KI.line}</span><div><h3>Signups per day</h3><p>Last 30 days{c ? ` · ${signTotal} total` : ''}</p></div></header>
-        {err ? <p className="ad-err">{err}</p> : !c ? <p className="ad-dim">Loading chart...</p> : <SignupsChart sg={sg} signTotal={signTotal} />}
+      <section className="pnl-card pnl-sgc">
+        <header className="pnl-chh"><span className="pnl-chi b">{KI.line}</span><div><h3>Signups per day</h3><p>Last 30 days{c ? ` · ${signTotal} total` : ''}</p></div></header>
+        {err ? <p className="pnl-err">{err}</p> : !c ? <p className="pnl-dim">Loading chart...</p> : <SignupsChart sg={sg} signTotal={signTotal} />}
       </section>
     </div>
   )
@@ -410,8 +410,8 @@ function Overview({ data, err, range }) {
   useEffect(() => {
     supabase.rpc('admin_charts').then(({ data: d, error }) => (error ? setCerr('The charts need one more SQL step. Run supabase/upgrade-admin-charts.sql in the Supabase SQL Editor.') : setC(d)))
   }, [])
-  if (err) return <p className="ad-err">{err}</p>
-  if (!data) return <p className="ad-dim">Loading numbers...</p>
+  if (err) return <p className="pnl-err">{err}</p>
+  if (!data) return <p className="pnl-dim">Loading numbers...</p>
   const by = data.byPlan || {}
   const free = +by.free || 0, paid = (+by.learner || 0) + (+by.pro || 0)
   const all = c?.revenue || []
@@ -420,22 +420,22 @@ function Overview({ data, err, range }) {
   const g = prev > 0 ? Math.round(((cur - prev) / prev) * 100) : cur > 0 ? 100 : 0
   return (
     <>
-      <div className="ad-kpis">
-        <div className="ad-kpi rev">
+      <div className="pnl-kpis">
+        <div className="pnl-kpi rev">
           <span className="ic">{KI.money}</span>
           <div className="tx"><span className="lb">Total Revenue</span><b>{c ? ngn(total) : '...'}</b>
             <div className="sb"><small>Last {range} months</small><em className={`tr ${g > 0 ? 'up' : g < 0 ? 'dn' : ''}`} title="This month compared with last month">{g > 0 ? '↗' : g < 0 ? '↘' : '–'} {Math.abs(g)}%</em></div></div>
         </div>
-        <div className="ad-kpi paid">
+        <div className="pnl-kpi paid">
           <span className="ic">{KI.paid}</span><span className="gh">{KI.usersSm}</span>
           <div className="tx"><span className="lb">Paid Users</span><b>{paid}</b><div className="sb"><small>All users</small></div></div>
         </div>
-        <div className="ad-kpi free">
+        <div className="pnl-kpi free">
           <span className="ic">{KI.free}</span><span className="gh">{KI.userSm}</span>
           <div className="tx"><span className="lb">Free Users</span><b>{free}</b><div className="sb"><small>All users</small></div></div>
         </div>
       </div>
-      <div className="ad-stats ad-mini">
+      <div className="pnl-stats pnl-mini">
         <Stat label="Online now" value={data.online} sub="seen in the last 2 minutes" tone="live" />
         <Stat label="Active today" value={data.today} sub="seen in the last 24 hours" />
         <Stat label="Total users" value={data.total} sub={`${data.new7} new in 7 days`} />
@@ -474,22 +474,22 @@ function PwModal({ u, onClose }) {
     setErr(await fnMsg(error, data, 'Could not set the password. Please try again.'))
   }
   return (
-    <div className="ad-ov ad-ovc" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="ad-pwm" role="dialog" aria-modal="true" aria-label="Reset password">
+    <div className="pnl-ov pnl-ovc" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="pnl-pwm" role="dialog" aria-modal="true" aria-label="Reset password">
         <h3>{done ? 'Password set' : 'Reset password'}</h3>
         <p className="who">@{u.username} · {u.email}</p>
         {done ? (
           <>
             <p>Send this password to the learner privately (WhatsApp or a call, not a public chat). After they log in, they should change it in <b>Settings &gt; Security</b>.</p>
-            <div className="row"><input readOnly value={pw} aria-label="Temporary password" onFocus={(e) => e.target.select()} /><button type="button" className="ad-btn" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button></div>
-            <div className="act"><button type="button" className="ad-btn ad-pri" onClick={onClose}>Done</button></div>
+            <div className="row"><input readOnly value={pw} aria-label="Temporary password" onFocus={(e) => e.target.select()} /><button type="button" className="pnl-btn" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button></div>
+            <div className="act"><button type="button" className="pnl-btn pnl-pri" onClick={onClose}>Done</button></div>
           </>
         ) : (
           <>
             <p>This replaces their current password straight away and is recorded in the audit log. Use the one below or type your own.</p>
-            <div className="row"><input value={pw} onChange={(e) => setPw(e.target.value.slice(0, 128))} aria-label="New temporary password" autoComplete="off" spellCheck="false" /><button type="button" className="ad-btn" onClick={() => { setPw(tempPw()); setErr('') }}>New</button></div>
-            {err && <p className="ad-err">{err}</p>}
-            <div className="act"><button type="button" className="ad-btn" onClick={onClose}>Cancel</button><button type="button" className="ad-btn ad-pri" disabled={busy} onClick={save}>{busy ? 'Saving...' : 'Set password'}</button></div>
+            <div className="row"><input value={pw} onChange={(e) => setPw(e.target.value.slice(0, 128))} aria-label="New temporary password" autoComplete="off" spellCheck="false" /><button type="button" className="pnl-btn" onClick={() => { setPw(tempPw()); setErr('') }}>New</button></div>
+            {err && <p className="pnl-err">{err}</p>}
+            <div className="act"><button type="button" className="pnl-btn" onClick={onClose}>Cancel</button><button type="button" className="pnl-btn pnl-pri" disabled={busy} onClick={save}>{busy ? 'Saving...' : 'Set password'}</button></div>
           </>
         )}
       </div>
@@ -531,29 +531,29 @@ function Users({ me }) {
   }
   return (
     <>
-      <div className="ad-tools">
+      <div className="pnl-tools">
         <input type="search" placeholder="Search name, username or email" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search users" />
-        <div className="ad-chips" role="group" aria-label="Filter">
+        <div className="pnl-chips" role="group" aria-label="Filter">
           {[['all', 'All'], ['online', 'Online'], ['free', 'Free'], ['learner', 'Learner'], ['pro', 'Pro'], ['suspended', 'Suspended']].map(([v, t]) => <button key={v} className={filter === v ? 'on' : ''} onClick={() => setFilter(v)}>{t}</button>)}
         </div>
       </div>
       {sel && <UserDrawer id={sel} me={me} onClose={() => setSel(null)} onChanged={load} />}
       {pwFor && <PwModal u={pwFor} onClose={() => setPwFor(null)} />}
-      {err && <p className="ad-err">{err}</p>}
-      {!rows ? <p className="ad-dim">Loading users...</p> : !rows.length ? <p className="ad-dim">No users match.</p> : (
-        <div className="ad-tw"><table className="ad-tbl">
+      {err && <p className="pnl-err">{err}</p>}
+      {!rows ? <p className="pnl-dim">Loading users...</p> : !rows.length ? <p className="pnl-dim">No users match.</p> : (
+        <div className="pnl-tw"><table className="pnl-tbl">
           <thead><tr><th>User</th><th>Email</th><th>Plan</th><th>Joined</th><th>Last seen</th><th className="r">Actions</th></tr></thead>
           <tbody>
             {rows.map((u) => (
               <tr className={u.suspended ? 'sus' : ''} key={u.id}>
-                <td><span className="ad-un"><i className={isOnline(u.last_seen) ? 'on' : ''} title={isOnline(u.last_seen) ? 'Online' : 'Offline'} /><span><button type="button" className="ad-link" onClick={() => setSel(u.id)}>{u.full_name || u.username}</button><small>@{u.username}</small></span></span>{u.is_admin && <em className="ad-tag">admin</em>}{u.suspended && <em className="ad-tag s">suspended</em>}</td>
+                <td><span className="pnl-un"><i className={isOnline(u.last_seen) ? 'on' : ''} title={isOnline(u.last_seen) ? 'Online' : 'Offline'} /><span><button type="button" className="pnl-link" onClick={() => setSel(u.id)}>{u.full_name || u.username}</button><small>@{u.username}</small></span></span>{u.is_admin && <em className="pnl-tag">admin</em>}{u.suspended && <em className="pnl-tag s">suspended</em>}</td>
                 <td className="mut">{u.email}</td>
                 <td><select value={u.plan} disabled={busy === u.id} onChange={(e) => act(u.id, { action: 'set_plan', plan: e.target.value }, planAsk(u, e.target.value))} aria-label={`Plan for ${u.username}`}>
                   <option value="free">Free</option><option value="learner">Learner</option><option value="pro">Pro</option></select></td>
                 <td>{day(u.created_at)}</td>
-                <td>{isOnline(u.last_seen) ? <b className="ad-live">online</b> : ago(u.last_seen)}</td>
-                <td className="r">{u.is_admin || u.id === me ? <small className="ad-dim">-</small>
-                  : <span className="ad-acts"><button className="ad-btn" disabled={busy === u.id} onClick={() => setPwFor(u)}>Reset password</button><button className={`ad-btn${u.suspended ? '' : ' warn'}`} disabled={busy === u.id} onClick={() => act(u.id, { action: 'set_suspended', suspended: !u.suspended }, suspendAsk(u))}>{u.suspended ? 'Restore' : 'Suspend'}</button></span>}</td>
+                <td>{isOnline(u.last_seen) ? <b className="pnl-live">online</b> : ago(u.last_seen)}</td>
+                <td className="r">{u.is_admin || u.id === me ? <small className="pnl-dim">-</small>
+                  : <span className="pnl-acts"><button className="pnl-btn" disabled={busy === u.id} onClick={() => setPwFor(u)}>Reset password</button><button className={`pnl-btn${u.suspended ? '' : ' warn'}`} disabled={busy === u.id} onClick={() => act(u.id, { action: 'set_suspended', suspended: !u.suspended }, suspendAsk(u))}>{u.suspended ? 'Restore' : 'Suspend'}</button></span>}</td>
               </tr>
             ))}
           </tbody>
@@ -642,11 +642,11 @@ function Payments() {
     document.body.appendChild(a); a.click(); a.remove()
     setTimeout(() => URL.revokeObjectURL(a.href), 1000)
   }
-  if (err) return <p className="ad-err">{err}</p>
-  if (!rows) return <p className="ad-dim">Loading payments...</p>
+  if (err) return <p className="pnl-err">{err}</p>
+  if (!rows) return <p className="pnl-dim">Loading payments...</p>
   return (
     <>
-      <div className="ad-filters">
+      <div className="pnl-filters">
         <label><span>Filter by status</span>
           <select value={status} onChange={(e) => setStatus(e.target.value)}>{PAY_STATUS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
         <label><span>Payment channel</span>
@@ -657,30 +657,30 @@ function Payments() {
           <label><span>From</span><input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} /></label>
           <label><span>To</span><input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} /></label>
         </>}
-        <div className="ad-fact">
-          <button type="button" className="ad-btn" onClick={reset} disabled={!filtered && !from && !to}>Reset filter</button>
-          <button type="button" className="ad-btn ad-csv" onClick={exportCsv} disabled={!shown.length}>
+        <div className="pnl-fact">
+          <button type="button" className="pnl-btn" onClick={reset} disabled={!filtered && !from && !to}>Reset filter</button>
+          <button type="button" className="pnl-btn pnl-csv" onClick={exportCsv} disabled={!shown.length}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></svg>
             Export CSV
           </button>
         </div>
       </div>
-      <p className="ad-dim ad-sum">{shown.length} {shown.length === 1 ? 'payment' : 'payments'} · {ngn(total)} received
-        {rows.some((p) => p.status === 'pending') && <button type="button" className="ad-btn ad-rc" onClick={() => recheck(null)} disabled={!!chk}>{chk === 'all' ? 'Checking...' : 'Recheck pending with Paystack'}</button>}
+      <p className="pnl-dim pnl-sum">{shown.length} {shown.length === 1 ? 'payment' : 'payments'} · {ngn(total)} received
+        {rows.some((p) => p.status === 'pending') && <button type="button" className="pnl-btn pnl-rc" onClick={() => recheck(null)} disabled={!!chk}>{chk === 'all' ? 'Checking...' : 'Recheck pending with Paystack'}</button>}
       </p>
-      {note && <p className="ad-ok" role="status">{note}</p>}
-      {!shown.length ? <p className="ad-dim">{rows.length ? 'No payments match these filters.' : 'No payments yet.'}</p> : (
-        <div className="ad-tw"><table className="ad-tbl">
+      {note && <p className="pnl-ok" role="status">{note}</p>}
+      {!shown.length ? <p className="pnl-dim">{rows.length ? 'No payments match these filters.' : 'No payments yet.'}</p> : (
+        <div className="pnl-tw"><table className="pnl-tbl">
           <thead><tr><th>User</th><th>Reference</th><th>Plan</th><th className="r">Amount</th><th>Channel</th><th>Status</th><th>Date</th></tr></thead>
           <tbody>
             {pg.rows.map((p) => (
               <tr key={p.reference}>
                 <td><b>{p.who?.username || 'unknown'}</b><small>{p.who?.email}</small></td>
-                <td><span className="ad-ref"><code title={p.reference}>{p.reference.slice(0, 11)}...</code><button type="button" className="ad-cp" onClick={() => copyRef(p.reference)} aria-label={`Copy reference ${p.reference}`}>{copied === p.reference ? 'Copied' : 'Copy'}</button></span></td>
+                <td><span className="pnl-ref"><code title={p.reference}>{p.reference.slice(0, 11)}...</code><button type="button" className="pnl-cp" onClick={() => copyRef(p.reference)} aria-label={`Copy reference ${p.reference}`}>{copied === p.reference ? 'Copied' : 'Copy'}</button></span></td>
                 <td className="cap">{p.plan} · {p.interval}</td>
                 <td className="r"><b>{ngn(p.amount_kobo)}</b>{p.coupon && <small>code {p.coupon}</small>}</td>
                 <td>{chName(p.channel)}</td>
-                <td><b className={`ad-pill ${p.status}`}>{p.status}</b>{p.status === 'pending' && <button type="button" className="ad-cp ad-rk" onClick={() => recheck(p.reference)} disabled={!!chk}>{chk === p.reference ? 'Checking...' : 'Recheck'}</button>}</td>
+                <td><b className={`pnl-pill ${p.status}`}>{p.status}</b>{p.status === 'pending' && <button type="button" className="pnl-cp pnl-rk" onClick={() => recheck(p.reference)} disabled={!!chk}>{chk === p.reference ? 'Checking...' : 'Recheck'}</button>}</td>
                 <td>{day(p.paid_at || p.created_at)}</td>
               </tr>
             ))}
@@ -701,21 +701,21 @@ function Messages() {
       .then(({ data, error }) => (error ? setErr('Could not load messages.') : setRows(data)))
   }, [])
   const pg = usePager(rows)
-  if (err) return <p className="ad-err">{err}</p>
-  if (!rows) return <p className="ad-dim">Loading messages...</p>
-  if (!rows.length) return <p className="ad-dim">No messages yet.</p>
+  if (err) return <p className="pnl-err">{err}</p>
+  if (!rows) return <p className="pnl-dim">Loading messages...</p>
+  if (!rows.length) return <p className="pnl-dim">No messages yet.</p>
   return (
     <>
-    <div className="ad-tw"><table className="ad-tbl">
+    <div className="pnl-tw"><table className="pnl-tbl">
       <thead><tr><th>Date</th><th>From</th><th>Topic</th><th>Message</th><th className="r">Reply</th></tr></thead>
       <tbody>
         {pg.rows.map((m) => (
           <tr key={m.id}>
             <td className="nw">{day(m.created_at)}<small>{ago(m.created_at)}</small></td>
             <td><b>{m.name}</b><small>{m.email}</small></td>
-            <td><span className="ad-pill">{TOPIC[m.topic] || m.topic}</span></td>
+            <td><span className="pnl-pill">{TOPIC[m.topic] || m.topic}</span></td>
             <td className="msg">{m.message}</td>
-            <td className="r"><a className="ad-btn" href={`mailto:${m.email}?subject=${encodeURIComponent('Re: your message to Shellwise')}`}>Reply</a></td>
+            <td className="r"><a className="pnl-btn" href={`mailto:${m.email}?subject=${encodeURIComponent('Re: your message to Shellwise')}`}>Reply</a></td>
           </tr>
         ))}
       </tbody>
@@ -801,26 +801,26 @@ function Bell({ onGo }) {
   }
   const askPerm = async () => { try { setPerm(await Notification.requestPermission()) } catch (e) { /* ignore */ } }
   return (
-    <div className="ad-bell" ref={box}>
-      <button className="ad-bellbtn" aria-label={unread ? unread + ' new notifications' : 'Notifications'} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+    <div className="pnl-bell" ref={box}>
+      <button className="pnl-bellbtn" aria-label={unread ? unread + ' new notifications' : 'Notifications'} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8.5 3 8.5H3S6 15 6 8" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>
-        {unread > 0 && <span className="ad-dot">{unread > 9 ? '9+' : unread}</span>}
+        {unread > 0 && <span className="pnl-dot">{unread > 9 ? '9+' : unread}</span>}
       </button>
       {open && (
-        <div className="ad-pop" role="dialog" aria-label="Notifications">
-          <div className="ad-pophd"><b>Notifications</b>{unread > 0 && <button onClick={markAll}>Mark all read</button>}</div>
-          <div className="ad-alr">
+        <div className="pnl-pop" role="dialog" aria-label="Notifications">
+          <div className="pnl-pophd"><b>Notifications</b>{unread > 0 && <button onClick={markAll}>Mark all read</button>}</div>
+          <div className="pnl-alr">
             <button onClick={toggleSound}>Sound: {sound ? 'on' : 'off'}</button>
             {perm === 'default' && <button onClick={askPerm}>Enable browser alerts</button>}
             {perm === 'granted' && <span>Browser alerts on</span>}
             {perm === 'denied' && <span>Browser alerts blocked in this browser</span>}
           </div>
           {items.length ? items.map((i) => (
-            <button key={i.k} className={'ad-it' + (isNew(i) ? ' new' : '')} onClick={() => { markAll(); setOpen(false); onGo(i.tab) }}>
-              <span className={'ad-ic ' + (i.ok ? i.tab : 'bad')}>{ICON[i.tab]}</span>
-              <span className="ad-ittx"><b>{i.text}</b><small>{ago(i.t)}</small></span>
+            <button key={i.k} className={'pnl-it' + (isNew(i) ? ' new' : '')} onClick={() => { markAll(); setOpen(false); onGo(i.tab) }}>
+              <span className={'pnl-ic ' + (i.ok ? i.tab : 'bad')}>{ICON[i.tab]}</span>
+              <span className="pnl-ittx"><b>{i.text}</b><small>{ago(i.t)}</small></span>
             </button>
-          )) : <p className="ad-dim ad-popempty">Nothing yet. New payments and messages will show up here.</p>}
+          )) : <p className="pnl-dim pnl-popempty">Nothing yet. New payments and messages will show up here.</p>}
         </div>
       )}
     </div>
@@ -872,48 +872,48 @@ function Announcements() {
   const pg = usePager(rows)
   return (
     <>
-      <form className="ad-card ad-form" onSubmit={post}>
+      <form className="pnl-card pnl-form" onSubmit={post}>
         <h3>New announcement</h3>
-        <label className="ad-fld"><span>Message <small>{msg.length}/240</small></span>
+        <label className="pnl-fld"><span>Message <small>{msg.length}/240</small></span>
           <textarea value={msg} onChange={(e) => setMsg(e.target.value.slice(0, 240))} rows={3} placeholder="For example: New game added this week. Try Secret Hunter!" /></label>
-        <div className="ad-row">
-          <label className="ad-fld"><span>Colour</span><select value={tone} onChange={(e) => setTone(e.target.value)}>{TONES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
-          <label className="ad-fld"><span>Snooze (remind again)</span><select value={snooze} onChange={(e) => setSnooze(+e.target.value)}>{SNOOZE.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
-          <button className="ad-btn ad-go" type="submit" disabled={busy || msg.trim().length < 3}>{busy ? 'Posting...' : 'Post announcement'}</button>
+        <div className="pnl-row">
+          <label className="pnl-fld"><span>Colour</span><select value={tone} onChange={(e) => setTone(e.target.value)}>{TONES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
+          <label className="pnl-fld"><span>Snooze (remind again)</span><select value={snooze} onChange={(e) => setSnooze(+e.target.value)}>{SNOOZE.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
+          <button className="pnl-btn pnl-go" type="submit" disabled={busy || msg.trim().length < 3}>{busy ? 'Posting...' : 'Post announcement'}</button>
         </div>
-        {msg.trim() && <div className={`ad-prev ${tone}`}>{msg.trim()}</div>}
-        <p className="ad-dim">Learners see announcements under the message icon on their profile page. After a learner opens it, the icon lights up again after the snooze time. Choose Never to tell them only once.</p>
+        {msg.trim() && <div className={`pnl-prev ${tone}`}>{msg.trim()}</div>}
+        <p className="pnl-dim">Learners see announcements under the message icon on their profile page. After a learner opens it, the icon lights up again after the snooze time. Choose Never to tell them only once.</p>
       </form>
-      {err && <p className="ad-err">{err}</p>}
-      {!rows ? <p className="ad-dim">Loading...</p> : !rows.length ? <p className="ad-dim">No announcements yet.</p> : (
+      {err && <p className="pnl-err">{err}</p>}
+      {!rows ? <p className="pnl-dim">Loading...</p> : !rows.length ? <p className="pnl-dim">No announcements yet.</p> : (
         <>
-          <div className="ad-tw"><table className="ad-tbl">
+          <div className="pnl-tw"><table className="pnl-tbl">
             <thead><tr><th>Message</th><th>Colour</th><th>Snooze</th><th>Status</th><th>Posted</th><th className="r">Actions</th></tr></thead>
             <tbody>
               {pg.rows.map((a) => (edit && edit.id === a.id ? (
-                <tr className="ad-editrow" key={a.id}><td colSpan={6}>
-                  <div className="ad-edit">
-                    <label className="ad-fld"><span>Edit message <small>{edit.message.length}/240</small></span>
+                <tr className="pnl-editrow" key={a.id}><td colSpan={6}>
+                  <div className="pnl-edit">
+                    <label className="pnl-fld"><span>Edit message <small>{edit.message.length}/240</small></span>
                       <textarea value={edit.message} rows={3} autoFocus onChange={(e) => setEdit({ ...edit, message: e.target.value.slice(0, 240) })} /></label>
-                    <div className="ad-row">
-                      <label className="ad-fld"><span>Colour</span><select value={edit.tone} onChange={(e) => setEdit({ ...edit, tone: e.target.value })}>{TONES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
-                      <label className="ad-fld"><span>Snooze</span><select value={edit.snooze_hours} onChange={(e) => setEdit({ ...edit, snooze_hours: +e.target.value })}>{SNOOZE.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
-                      <button type="button" className="ad-btn ad-go" disabled={busy || edit.message.trim().length < 3} onClick={saveEdit}>{busy ? 'Saving...' : 'Save changes'}</button>
-                      <button type="button" className="ad-btn" onClick={() => setEdit(null)}>Cancel</button>
+                    <div className="pnl-row">
+                      <label className="pnl-fld"><span>Colour</span><select value={edit.tone} onChange={(e) => setEdit({ ...edit, tone: e.target.value })}>{TONES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
+                      <label className="pnl-fld"><span>Snooze</span><select value={edit.snooze_hours} onChange={(e) => setEdit({ ...edit, snooze_hours: +e.target.value })}>{SNOOZE.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
+                      <button type="button" className="pnl-btn pnl-go" disabled={busy || edit.message.trim().length < 3} onClick={saveEdit}>{busy ? 'Saving...' : 'Save changes'}</button>
+                      <button type="button" className="pnl-btn" onClick={() => setEdit(null)}>Cancel</button>
                     </div>
                   </div>
                 </td></tr>
               ) : (
                 <tr key={a.id}>
                   <td className="msg">{a.message}</td>
-                  <td className="cap"><span className={`ad-dotc ${a.tone}`} />{a.tone}</td>
+                  <td className="cap"><span className={`pnl-dotc ${a.tone}`} />{a.tone}</td>
                   <td className="nw">{snoozeName(a.snooze_hours)}</td>
-                  <td><b className={`ad-pill ${state(a) === 'live' ? 'success' : state(a) === 'expired' ? 'failed' : ''}`}>{state(a)}</b></td>
+                  <td><b className={`pnl-pill ${state(a) === 'live' ? 'success' : state(a) === 'expired' ? 'failed' : ''}`}>{state(a)}</b></td>
                   <td className="nw">{day(a.created_at)}<small>{ago(a.created_at)}</small></td>
-                  <td className="r"><span className="ad-acts">
-                    <button className="ad-btn" onClick={() => { setErr(''); setEdit({ id: a.id, message: a.message, tone: a.tone, snooze_hours: a.snooze_hours || 0 }) }}>Edit</button>
-                    <button className="ad-btn" onClick={() => toggle(a)}>{a.active ? 'Hide' : 'Show'}</button>
-                    <button className="ad-btn warn" onClick={() => del(a)}>Delete</button>
+                  <td className="r"><span className="pnl-acts">
+                    <button className="pnl-btn" onClick={() => { setErr(''); setEdit({ id: a.id, message: a.message, tone: a.tone, snooze_hours: a.snooze_hours || 0 }) }}>Edit</button>
+                    <button className="pnl-btn" onClick={() => toggle(a)}>{a.active ? 'Hide' : 'Show'}</button>
+                    <button className="pnl-btn warn" onClick={() => del(a)}>Delete</button>
                   </span></td>
                 </tr>
               )))}
@@ -972,25 +972,25 @@ function PrivateMessages() {
   const pg = usePager(rows)
   return (
     <>
-      <form className="ad-card ad-form ad-pm" onSubmit={send}>
+      <form className="pnl-card pnl-form pnl-pm" onSubmit={send}>
         <h3>Message a learner privately</h3>
         {to ? (
-          <div className="ad-to"><span>To <b>@{to.username}</b> <small className="ad-dim">{to.email}</small></span><button type="button" className="ad-btn" onClick={() => { setTo(null); setQ('') }}>Change</button></div>
+          <div className="pnl-to"><span>To <b>@{to.username}</b> <small className="pnl-dim">{to.email}</small></span><button type="button" className="pnl-btn" onClick={() => { setTo(null); setQ('') }}>Change</button></div>
         ) : (
-          <div className="ad-find">
-            <label className="ad-fld"><span>Find the learner</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Type a username, name or email" autoComplete="off" /></label>
-            {found.length > 0 && <ul className="ad-found">{found.map((u) => <li key={u.id}><button type="button" onClick={() => { setTo(u); setFound([]) }}><b>@{u.username}</b><small>{u.full_name ? u.full_name + ' · ' : ''}{u.email}</small></button></li>)}</ul>}
+          <div className="pnl-find">
+            <label className="pnl-fld"><span>Find the learner</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Type a username, name or email" autoComplete="off" /></label>
+            {found.length > 0 && <ul className="pnl-found">{found.map((u) => <li key={u.id}><button type="button" onClick={() => { setTo(u); setFound([]) }}><b>@{u.username}</b><small>{u.full_name ? u.full_name + ' · ' : ''}{u.email}</small></button></li>)}</ul>}
           </div>
         )}
-        <label className="ad-fld"><span>Subject (optional)</span><input value={subject} maxLength={80} onChange={(e) => setSubject(e.target.value)} placeholder="Your payment, a reply, a tip..." /></label>
-        <label className="ad-fld"><span>Message <small>{body.length}/1000</small></span><textarea rows={4} value={body} onChange={(e) => setBody(e.target.value.slice(0, 1000))} placeholder="Write your message" /></label>
-        <div className="ad-row"><button className="ad-btn ad-go" type="submit" disabled={busy || !to || !body.trim()}>{busy ? 'Sending...' : 'Send message'}</button></div>
-        {ok && <p className="ad-ok">{ok}</p>}
+        <label className="pnl-fld"><span>Subject (optional)</span><input value={subject} maxLength={80} onChange={(e) => setSubject(e.target.value)} placeholder="Your payment, a reply, a tip..." /></label>
+        <label className="pnl-fld"><span>Message <small>{body.length}/1000</small></span><textarea rows={4} value={body} onChange={(e) => setBody(e.target.value.slice(0, 1000))} placeholder="Write your message" /></label>
+        <div className="pnl-row"><button className="pnl-btn pnl-go" type="submit" disabled={busy || !to || !body.trim()}>{busy ? 'Sending...' : 'Send message'}</button></div>
+        {ok && <p className="pnl-ok">{ok}</p>}
       </form>
       {rows && rows.length > 0 && (
         <>
-          <h3 className="ad-sub">Sent messages</h3>
-          <div className="ad-tw"><table className="ad-tbl">
+          <h3 className="pnl-sub">Sent messages</h3>
+          <div className="pnl-tw"><table className="pnl-tbl">
             <thead><tr><th>To</th><th>Subject</th><th>Message</th><th>Sent</th><th>Status</th><th className="r">Actions</th></tr></thead>
             <tbody>
               {pg.rows.map((m) => (
@@ -999,8 +999,8 @@ function PrivateMessages() {
                   <td>{m.subject || '-'}</td>
                   <td className="msg">{m.body}</td>
                   <td className="nw">{when(m.created_at)}</td>
-                  <td><b className={`ad-pill ${m.read ? 'success' : 'pending'}`}>{m.read ? 'read' : 'not read yet'}</b></td>
-                  <td className="r"><button className="ad-btn warn" onClick={() => del(m)}>Delete</button></td>
+                  <td><b className={`pnl-pill ${m.read ? 'success' : 'pending'}`}>{m.read ? 'read' : 'not read yet'}</b></td>
+                  <td className="r"><button className="pnl-btn warn" onClick={() => del(m)}>Delete</button></td>
                 </tr>
               ))}
             </tbody>
@@ -1042,33 +1042,33 @@ function Coupons() {
   const state = (c) => (!c.active ? 'off' : c.expires_at && new Date(c.expires_at) < new Date() ? 'expired' : c.max_uses != null && c.uses >= c.max_uses ? 'used up' : 'live')
   return (
     <>
-      <form className="ad-card ad-form" onSubmit={add}>
+      <form className="pnl-card pnl-form" onSubmit={add}>
         <h3>New discount code</h3>
-        <div className="ad-row">
-          <label className="ad-fld"><span>Code</span><input value={f.code} onChange={set('code')} placeholder="LAUNCH20" autoComplete="off" /></label>
-          <label className="ad-fld"><span>Percent off</span><input type="number" min="1" max="90" value={f.percent} onChange={set('percent')} /></label>
-          <label className="ad-fld"><span>Max uses (empty = unlimited)</span><input type="number" min="1" value={f.max} onChange={set('max')} placeholder="Unlimited" /></label>
-          <label className="ad-fld"><span>Last day (optional)</span><input type="date" value={f.end} onChange={set('end')} /></label>
+        <div className="pnl-row">
+          <label className="pnl-fld"><span>Code</span><input value={f.code} onChange={set('code')} placeholder="LAUNCH20" autoComplete="off" /></label>
+          <label className="pnl-fld"><span>Percent off</span><input type="number" min="1" max="90" value={f.percent} onChange={set('percent')} /></label>
+          <label className="pnl-fld"><span>Max uses (empty = unlimited)</span><input type="number" min="1" value={f.max} onChange={set('max')} placeholder="Unlimited" /></label>
+          <label className="pnl-fld"><span>Last day (optional)</span><input type="date" value={f.end} onChange={set('end')} /></label>
         </div>
-        <div className="ad-row">
-          <label className="ad-fld grow"><span>Note for yourself (optional)</span><input value={f.note} onChange={set('note')} maxLength={80} placeholder="Launch week promo" /></label>
-          <button className="ad-btn ad-go" type="submit" disabled={busy}>{busy ? 'Saving...' : 'Create code'}</button>
+        <div className="pnl-row">
+          <label className="pnl-fld grow"><span>Note for yourself (optional)</span><input value={f.note} onChange={set('note')} maxLength={80} placeholder="Launch week promo" /></label>
+          <button className="pnl-btn pnl-go" type="submit" disabled={busy}>{busy ? 'Saving...' : 'Create code'}</button>
         </div>
-        <p className="ad-dim">Each person can use a code once. A discounted payment is a one-time charge for that period, so the learner renews at full price. Invite-a-friend rewards appear below as FRIEND-XXXXXX codes.</p>
+        <p className="pnl-dim">Each person can use a code once. A discounted payment is a one-time charge for that period, so the learner renews at full price. Invite-a-friend rewards appear below as FRIEND-XXXXXX codes.</p>
       </form>
-      {err && <p className="ad-err">{err}</p>}
-      {!rows ? <p className="ad-dim">Loading...</p> : !rows.length ? <p className="ad-dim">No codes yet.</p> : (
-        <div className="ad-tw"><table className="ad-tbl">
+      {err && <p className="pnl-err">{err}</p>}
+      {!rows ? <p className="pnl-dim">Loading...</p> : !rows.length ? <p className="pnl-dim">No codes yet.</p> : (
+        <div className="pnl-tw"><table className="pnl-tbl">
           <thead><tr><th>Code</th><th>Off</th><th>Used</th><th>Ends</th><th>Status</th><th className="r">Actions</th></tr></thead>
           <tbody>
             {pg.rows.map((c) => (
               <tr key={c.code}>
-                <td><b className="mono">{c.code}</b>{c.owner_id && <em className="ad-tag">reward</em>}{c.note && <small>{c.note}</small>}</td>
+                <td><b className="mono">{c.code}</b>{c.owner_id && <em className="pnl-tag">reward</em>}{c.note && <small>{c.note}</small>}</td>
                 <td>{c.percent}%</td>
                 <td>{c.uses}{c.max_uses != null ? ` / ${c.max_uses}` : ''}</td>
                 <td>{c.expires_at ? day(c.expires_at) : '-'}</td>
-                <td><b className={`ad-pill ${state(c) === 'live' ? 'success' : 'failed'}`}>{state(c)}</b></td>
-                <td className="r"><span className="ad-acts"><button className="ad-btn" onClick={() => toggle(c)}>{c.active ? 'Turn off' : 'Turn on'}</button><button className="ad-btn warn" onClick={() => del(c)}>Delete</button></span></td>
+                <td><b className={`pnl-pill ${state(c) === 'live' ? 'success' : 'failed'}`}>{state(c)}</b></td>
+                <td className="r"><span className="pnl-acts"><button className="pnl-btn" onClick={() => toggle(c)}>{c.active ? 'Turn off' : 'Turn on'}</button><button className="pnl-btn warn" onClick={() => del(c)}>Delete</button></span></td>
               </tr>
             ))}
           </tbody>
@@ -1098,13 +1098,13 @@ function Audit() {
   useEffect(() => { load() }, [load])
   return (
     <>
-      <div className="ad-tools">
-        <div className="ad-chips" role="group" aria-label="Filter">{AUDIT_FILTER.map(([v, t]) => <button key={v} className={filter === v ? 'on' : ''} onClick={() => setFilter(v)}>{t}</button>)}</div>
+      <div className="pnl-tools">
+        <div className="pnl-chips" role="group" aria-label="Filter">{AUDIT_FILTER.map(([v, t]) => <button key={v} className={filter === v ? 'on' : ''} onClick={() => setFilter(v)}>{t}</button>)}</div>
       </div>
-      <p className="ad-dim ad-sum">A permanent record of who suspended, restored or deleted an account or changed a plan, and when. It cannot be edited.</p>
-      {err && <p className="ad-err">{err}</p>}
-      {!rows ? (!err && <p className="ad-dim">Loading...</p>) : !rows.length ? <p className="ad-dim">Nothing recorded yet. Entries appear here when you suspend, restore or delete a user, or change a plan.</p> : (
-        <div className="ad-tw"><table className="ad-tbl">
+      <p className="pnl-dim pnl-sum">A permanent record of who suspended, restored or deleted an account or changed a plan, and when. It cannot be edited.</p>
+      {err && <p className="pnl-err">{err}</p>}
+      {!rows ? (!err && <p className="pnl-dim">Loading...</p>) : !rows.length ? <p className="pnl-dim">Nothing recorded yet. Entries appear here when you suspend, restore or delete a user, or change a plan.</p> : (
+        <div className="pnl-tw"><table className="pnl-tbl">
           <thead><tr><th>When</th><th>Done by</th><th>Action</th><th>User</th><th>Details</th></tr></thead>
           <tbody>
             {rows.map((r) => {
@@ -1113,7 +1113,7 @@ function Audit() {
                 <tr key={r.id}>
                   <td className="nw">{when(r.created_at)}<small>{ago(r.created_at)}</small></td>
                   <td><b>{r.actor_name === 'system' ? 'System' : '@' + r.actor_name}</b></td>
-                  <td><b className={`ad-pill ${tone}`}>{label}</b></td>
+                  <td><b className={`pnl-pill ${tone}`}>{label}</b></td>
                   <td>{r.target_name ? '@' + r.target_name : '-'}</td>
                   <td className="mut">{r.detail || '-'}</td>
                 </tr>
@@ -1161,48 +1161,48 @@ export default function Admin() {
   }, [])
   const title = useMemo(() => TABS.find((t) => t[0] === tab)[1], [tab])
 
-  if (BACKEND !== 'supabase') return <main className="ad-gate"><h1>Admin panel</h1><p>The admin panel needs the real backend. Connect Supabase (see the README), run <code>supabase/admin.sql</code>, then open this page again.</p><Link to="/">Back to the site</Link></main>
+  if (BACKEND !== 'supabase') return <main className="pnl-gate"><h1>Admin panel</h1><p>The admin panel needs the real backend. Connect Supabase (see the README), run <code>supabase/admin.sql</code>, then open this page again.</p><Link to="/">Back to the site</Link></main>
   if (!ready) return <AdLoader />
   // Not signed in: go to the login page and come back here. Signed in but not an admin: back to the site.
   if (!allowed) return <Navigate to={user && !user.guest ? '/' : '/auth?mode=login&next=%2Fadmin'} replace />
   return (
     <ConfirmHost>
-    <div className="ad">
-      <header className="ad-mbar">
-        <button type="button" className="ad-burger" aria-label="Open menu" aria-expanded={menu} aria-controls="ad-drawer" onClick={() => setMenu(true)}>
+    <div className="pnl">
+      <header className="pnl-mbar">
+        <button type="button" className="pnl-burger" aria-label="Open menu" aria-expanded={menu} aria-controls="pnl-drawer" onClick={() => setMenu(true)}>
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
         </button>
-        <span className="ad-mtitle">Shellwise <em>admin</em></span>
-        <span className="ad-av">{user.avatar ? <img src={user.avatar} alt="" /> : (user.user || '?').slice(0, 1).toUpperCase()}</span>
+        <span className="pnl-mtitle">Shellwise <em>admin</em></span>
+        <span className="pnl-av">{user.avatar ? <img src={user.avatar} alt="" /> : (user.user || '?').slice(0, 1).toUpperCase()}</span>
       </header>
-      <div className={`ad-scrim${menu ? ' on' : ''}`} onClick={() => setMenu(false)} aria-hidden="true" />
-      <aside className={`ad-side${menu ? ' open' : ''}`} id="ad-drawer" aria-label="Menu">
-        <button type="button" className="ad-sclose" aria-label="Close menu" onClick={() => setMenu(false)}>
+      <div className={`pnl-scrim${menu ? ' on' : ''}`} onClick={() => setMenu(false)} aria-hidden="true" />
+      <aside className={`pnl-side${menu ? ' open' : ''}`} id="pnl-drawer" aria-label="Menu">
+        <button type="button" className="pnl-sclose" aria-label="Close menu" onClick={() => setMenu(false)}>
           <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19" /></svg>
         </button>
-        <Link className="ad-brand" to="/"><img src="/assets/kali-logo-white.svg" alt="" width="18" height="18" /><span>Shellwise <em>admin</em></span></Link>
-        <nav aria-label="Admin sections">{TABS.map(([v, t]) => <button key={v} className={tab === v ? 'on' : ''} onClick={() => { setTab(v); setMenu(false) }}><span className="ad-nl">{ICON[v]}{t}</span>{v === 'overview' && ov ? <i>{ov.online} online</i> : null}</button>)}</nav>
-        <Link className="ad-out" to="/lab">{ICON.lab}Open the lab</Link>
-        <div className="ad-me">
-          <span className="ad-av">{user.avatar ? <img src={user.avatar} alt="" /> : (user.user || '?').slice(0, 1).toUpperCase()}</span>
-          <span className="ad-meinfo"><b>{user.user}</b><small>Administrator</small></span>
+        <Link className="pnl-brand" to="/"><img src="/assets/kali-logo-white.svg" alt="" width="18" height="18" /><span>Shellwise <em>admin</em></span></Link>
+        <nav aria-label="Admin sections">{TABS.map(([v, t]) => <button key={v} className={tab === v ? 'on' : ''} onClick={() => { setTab(v); setMenu(false) }}><span className="pnl-nl">{ICON[v]}{t}</span>{v === 'overview' && ov ? <i>{ov.online} online</i> : null}</button>)}</nav>
+        <Link className="pnl-out" to="/lab">{ICON.lab}Open the lab</Link>
+        <div className="pnl-me">
+          <span className="pnl-av">{user.avatar ? <img src={user.avatar} alt="" /> : (user.user || '?').slice(0, 1).toUpperCase()}</span>
+          <span className="pnl-meinfo"><b>{user.user}</b><small>Administrator</small></span>
         </div>
       </aside>
-      <main className="ad-main">
-        <header className="ad-head">
+      <main className="pnl-main">
+        <header className="pnl-head">
           <div>
             {tab === 'overview'
-              ? <><h1>Good day, {(user.name || user.user || 'there').trim().split(/\s+/)[0]} <span className="ad-wave" aria-hidden="true">👋</span></h1><p className="ad-dim">Here&apos;s an overview of your platform performance.</p></>
-              : <><h1>{title}</h1><p className="ad-dim">Signed in as {user.email}</p></>}
+              ? <><h1>Good day, {(user.name || user.user || 'there').trim().split(/\s+/)[0]} <span className="pnl-wave" aria-hidden="true">👋</span></h1><p className="pnl-dim">Here&apos;s an overview of your platform performance.</p></>
+              : <><h1>{title}</h1><p className="pnl-dim">Signed in as {user.email}</p></>}
           </div>
-          <div className="ad-act">
+          <div className="pnl-act">
             {tab === 'overview' && (
-              <label className="ad-range">{KI.cal}
+              <label className="pnl-range">{KI.cal}
                 <select value={range} onChange={(e) => setRange(+e.target.value)} aria-label="Date range"><option value={3}>Last 3 months</option><option value={6}>Last 6 months</option></select>
                 {KI.chev}
               </label>
             )}
-            <Bell onGo={setTab} /><Link className="ad-btn" to="/">View site</Link>
+            <Bell onGo={setTab} /><Link className="pnl-btn" to="/">View site</Link>
           </div>
         </header>
         {tab === 'overview' && <Overview data={ov} err={ovErr} range={range} />}
