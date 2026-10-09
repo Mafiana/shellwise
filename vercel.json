@@ -1,0 +1,1 @@
+{ "rewrites": [{ "source": "/((?!lab/|assets/).*)", "destination": "/index.html" }] }

@@ -1,0 +1,27 @@
+/* Inline SVG icons (Lucide, ISC) that replace emoji */
+.ico{display:inline-block;width:1.1em;height:1.1em;vertical-align:-.18em;line-height:0;flex:none;--tc:currentColor}
+.ico svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;display:block}
+.ico svg.f{fill:currentColor;stroke:none}
+/* accent tones, used by large icon containers */
+.t-b{--tc:#2f8cff}.t-g{--tc:#22b86a}.t-p{--tc:#9b7bf0}.t-o{--tc:#f08a24}.t-r{--tc:#f0564f}
+html[data-theme=light] .t-b,#lp.lt .t-b{--tc:#1f6fe0}
+html[data-theme=light] .t-g,#lp.lt .t-g{--tc:#14894a}
+html[data-theme=light] .t-p,#lp.lt .t-p{--tc:#6a3fd6}
+html[data-theme=light] .t-o,#lp.lt .t-o{--tc:#c25f08}
+html[data-theme=light] .t-r,#lp.lt .t-r{--tc:#cf3030}
+.ic .ico,.mc-ic .ico,.gban .ico,.dyk-bulb .ico,.val .ico,.lk .ico,.cc .ico,.cc-ic .ico,.bdg-i .ico,.bd .ico{color:var(--tc)}
+/* sidebar */
+#side h1 .ico{width:1.25em;height:1.25em;vertical-align:-.28em;margin-right:2px}
+#side button .ico{width:1.15em;height:1.15em;vertical-align:-.22em;margin-right:3px;opacity:.9}
+/* large containers */
+.ic{line-height:0}.ic .ico{width:24px;height:24px}
+.mc-ic{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:11px;background:color-mix(in srgb,var(--tc,var(--blue)) 14%,transparent);line-height:0}
+.mc-ic:has(.t-b){--tc:#2f8cff}.mc-ic:has(.t-g){--tc:#22b86a}.mc-ic:has(.t-p){--tc:#9b7bf0}.mc-ic:has(.t-o){--tc:#f08a24}.mc-ic:has(.t-r){--tc:#f0564f}
+html[data-theme=light] .mc-ic:has(.t-b){--tc:#1f6fe0}html[data-theme=light] .mc-ic:has(.t-g){--tc:#14894a}html[data-theme=light] .mc-ic:has(.t-p){--tc:#6a3fd6}html[data-theme=light] .mc-ic:has(.t-o){--tc:#c25f08}html[data-theme=light] .mc-ic:has(.t-r){--tc:#cf3030}
+.mc-ic .ico{width:22px;height:22px}
+.gban .ico{width:44px;height:44px}.gban .ico svg{stroke-width:1.6}
+.lk .ico{width:1em;height:1em}.lk .ico svg{stroke-width:1.5}
+.dyk-bulb .ico{width:38px;height:38px}
+.val .ico{width:30px;height:30px;display:block;margin:0 0 2px}.val .ico svg{stroke-width:1.7}
+.stt .ico,.btn .ico,.fb .ico,.hl .ico,#toast .ico,#hud .ico{width:1.05em;height:1.05em;vertical-align:-.16em}
+button .ico{margin-right:.2em}
