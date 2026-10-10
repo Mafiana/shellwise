@@ -7,7 +7,13 @@ export const CURRENCY = { code: 'NGN', symbol: '₦' }
 export const PLANS = [
   { id: 'free', name: 'Free', tag: 'For getting started', price: 0, col: '#2fd37a', col2: '#0f8f5a', cta: 'Create free account',
     lim: [['10', 'modules'], ['6', 'games'], ['2', 'quizzes']], inc: 'Included',
-    f: ['Practice terminal with 230+ commands', 'First 10 of 55 guided modules', '6 of 31 games and 2 topic quizzes', 'Progress saved on this device'] },
+    f: [
+  '15-minute free trial in the lab',
+  'Practice terminal with 230+ commands',
+  'First 10 of 55 guided modules',
+  '6 of 31 games and 2 topic quizzes',
+  'Progress saved on this device — upgrade to sync & keep access'
+] },
   { id: 'learner', name: 'Learner', tag: 'For steady progress', price: 1300, yearly: 1100, col: '#2f8cff', col2: '#1646a8', cta: 'Choose Learner',
     lim: [['35', 'modules'], ['20', 'games'], ['8', 'quizzes']], inc: 'Everything in Free, plus',
     f: ['35 modules, 20 games and 8 topic quizzes', 'Daily challenge and streaks', 'Profile photo and progress sync across devices'] },

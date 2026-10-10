@@ -22,6 +22,68 @@
  const FEAT={cert:['pro','Your certificate of completion'],daily:['learner','The daily challenge and streaks'],exam:['pro','Timed exam mode'],ctf:['pro','Advanced missions and CTF packs'],paths:['pro','Learning paths and the placement test']};
  window.SWP={plan,can:f=>RANK[plan()]>=RANK[FEAT[f][0]],need:f=>FEAT[f][0],name:p=>PN[p],mods:()=>Math.min(M.length,lim().mods)};
 
+ // ---- Free plan: lock after 15 minutes total lab time
+ const FREE_MS = 15 * 60 * 1000;
+ const freeKey = () => {
+  try {
+   const o = JSON.parse(localStorage.getItem('kuser') || 'null');
+   const id = (o && (o.email || o.user)) || 'anon';
+   return 'sw_free_start:' + id;
+  } catch (e) { return 'sw_free_start:anon'; }
+ };
+ const freeStart = () => {
+  if (plan() !== 'free') return;
+  const k = freeKey();
+  if (!localStorage.getItem(k)) localStorage.setItem(k, String(Date.now()));
+ };
+ const freeExpired = () => {
+  if (plan() !== 'free') return false;
+  freeStart();
+  const t = +localStorage.getItem(freeKey()) || Date.now();
+  return Date.now() - t >= FREE_MS;
+ };
+ function freeLock() {
+  if (plan() !== 'free' || !freeExpired()) {
+   const old = document.getElementById('free-lock');
+   if (old) old.remove();
+   return;
+  }
+  if (document.getElementById('free-lock')) return;
+  const d = document.createElement('div');
+  d.id = 'free-lock';
+  d.setAttribute('role', 'dialog');
+  d.setAttribute('aria-modal', 'true');
+    d.innerHTML =
+    '<div class="up-s"></div><div class="up-p free-lock-p">' +
+    '<div class="up-i free-lock-ic" aria-hidden="true">' +
+      '<svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+        '<rect x="5" y="11" width="14" height="10" rx="2"/>' +
+        '<path d="M8 11V8a4 4 0 0 1 8 0v3"/>' +
+      '</svg>' +
+    '</div>' +
+    '<h2>Enjoying yourself?</h2>' +
+    '<p>Upgrade now to have full access to the terminal, modules, quizzes and games.</p>' +
+    '<div class="up-a"><button class="btn free-lock-btn" id="freego">Choose a plan</button></div></div>';
+  document.body.appendChild(d);
+  d.querySelector('#freego').onclick = () => {
+   if (window.parent !== window) {
+    try { window.parent.postMessage({ shellwise: 'plans' }, location.origin); } catch (e) {}
+   } else location.href = '/#plans';
+  };
+ }
+ freeStart();
+ setInterval(freeLock, 10000);
+ setTimeout(freeLock, 1500);
+ window.addEventListener('kuser', () => {
+  if (plan() !== 'free') {
+   try { localStorage.removeItem(freeKey()); } catch (e) {}
+   const old = document.getElementById('free-lock');
+   if (old) old.remove();
+  } else freeStart();
+  freeLock();
+ });
+
+
  // ---- upgrade prompt
  function upsell(kind){
   const p=plan(),n=NEXT[p],L=LIMITS[p];
@@ -59,8 +121,8 @@
  ['mods','quiz','games'].forEach(k=>{const o=R[k];R[k]=()=>banner(k)+o()});
 
  // ---- block direct calls too
- const om=window.modOpen;window.modOpen=i=>{if(!modOk(i))return upsell('mods');om(i)};
- const oqs=window.qzStart;window.qzStart=id=>{if(!quizOk(id))return upsell('quiz');oqs(id)};
- const op=window.playGame;window.playGame=id=>{if(!gameOk(id))return upsell('games');op(id)};
- const osl=window.startLesson;window.startLesson=()=>{if(!modOk(cur()))return upsell('mods');osl()};
+ const om=window.modOpen;window.modOpen=i=>{if(freeExpired())return freeLock();if(!modOk(i))return upsell('mods');om(i)};
+ const oqs=window.qzStart;window.qzStart=id=>{if(freeExpired())return freeLock();if(!quizOk(id))return upsell('quiz');oqs(id)};
+ const op=window.playGame;window.playGame=id=>{if(freeExpired())return freeLock();if(!gameOk(id))return upsell('games');op(id)};
+ const osl=window.startLesson;window.startLesson=()=>{if(freeExpired())return freeLock();if(!modOk(cur()))return upsell('mods');osl()};
 })();

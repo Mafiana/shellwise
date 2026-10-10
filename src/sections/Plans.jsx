@@ -53,7 +53,7 @@ export default function Plans() {
           <article key={p.id} className={`plan reveal${p.pop ? ' pop' : ''}`} style={{ '--pc': p.col, '--pc2': p.col2 }}>
             {p.pop && <span className="ribbon">Most popular</span>}
             <h3>{p.name}</h3><p className="ptag">{p.tag}</p>
-            <div className="price"><span className="cur">{CURRENCY.symbol}</span><b>{money(monthlyPrice(p, bp))}</b><span className="per">{p.price ? '/ month' : 'forever'}</span></div>
+            <div className="price"><span className="cur">{CURRENCY.symbol}</span><b>{money(monthlyPrice(p, bp))}</b><span className="per">{p.price ? '/ month' : '15-min trial'}</span></div>
             <p className="bill">{p.price ? <><span className="bm">Billed monthly</span><span className="by">Billed yearly, cheaper per month</span></> : 'No card needed'}</p>
             <div className="p-lim" aria-label="What is open">{p.lim.map(([n, l]) => <span key={l}><b>{n}</b>{l}</span>)}</div>
             <p className="p-inc">{p.inc}</p>

@@ -339,7 +339,7 @@ export default function Auth() {
               <span>Choose your plan</span>
               <div>{PLANS.map((p) => (
                 <button type="button" key={p.id} role="radio" aria-checked={planId === p.id} className={planId === p.id ? 'on' : ''} style={{ '--pc': p.col }} onClick={() => { setPlanId(p.id); setErr('') }}>
-                  <b>{p.name}</b><small>{p.price ? priceLine(p, bp) : 'Free forever'}</small>
+                  <b>{p.name}</b><small>{p.price ? priceLine(p, bp) : '15-min trial'}</small>
                 </button>))}</div>
             </div>}
             {signup && <>
