@@ -24,6 +24,16 @@ const ago = (t) => {
 }
 const day = (t) => (t ? new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '')
 const isOnline = (t) => !!t && Date.now() - new Date(t).getTime() < ONLINE_MS
+// Runs `load` now, then every `ms` while this browser tab is visible, and again the moment you switch back to it.
+function useLive(load, ms = 15000, first = true) {
+  useEffect(() => {
+    if (first) load()
+    const tick = () => { if (!document.hidden) load() }
+    const t = setInterval(tick, ms)
+    document.addEventListener('visibilitychange', tick); window.addEventListener('focus', tick)
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', tick); window.removeEventListener('focus', tick) }
+  }, [load, ms, first])
+}
 const TABS = [['overview', 'Dashboard'], ['users', 'Users'], ['payments', 'Payments'], ['subscriptions', 'Subscriptions'], ['messages', 'Messages'], ['tickets', 'Tickets'], ['announcements', 'Announcements'], ['coupons', 'Coupons'], ['audit', 'Audit log']]
 const svg = (d) => <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>
 const ICON = {
@@ -161,6 +171,8 @@ function UserDrawer({ id, me, onClose, onChanged }) {
   const [busy, setBusy] = useState(false)
   const [typed, setTyped] = useState('')
   const [pwOpen, setPwOpen] = useState(false)
+  const [edit, setEdit] = useState(null)
+  const [okMsg, setOkMsg] = useState('')
   const load = useCallback(async () => {
     const [a, b] = await Promise.all([
       supabase.from('profiles').select(USER_COLS).eq('id', id).maybeSingle(),
@@ -169,7 +181,7 @@ function UserDrawer({ id, me, onClose, onChanged }) {
     if (a.error || !a.data) return setErr('Could not load this user.')
     setU(a.data); setPays(b.data || [])
   }, [id])
-  useEffect(() => { load() }, [load])
+  useLive(load)
   useEffect(() => {
     const k = (e) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', k)
@@ -183,6 +195,16 @@ function UserDrawer({ id, me, onClose, onChanged }) {
     if (error || data?.error) return setErr(await fnMsg(error, data, 'That action failed.'))
     onChanged()
     if (body.action === 'delete_user') onClose(); else load()
+  }
+  const startEdit = () => { setErr(''); setOkMsg(''); setEdit({ full_name: u.full_name || '', username: u.username || '', email: u.email || '', location: u.location || '', gender: u.gender || '', bio: u.bio || '' }) }
+  const setE = (k) => (e) => setEdit((v) => ({ ...v, [k]: e.target.value }))
+  const saveEdit = async (e) => {
+    e.preventDefault()
+    setBusy(true); setErr(''); setOkMsg('')
+    const { data, error } = await supabase.functions.invoke('admin-action', { body: { user_id: id, action: 'update_profile', fields: edit } })
+    setBusy(false)
+    if (error || data?.error) return setErr(await fnMsg(error, data, 'Could not save the changes.'))
+    setEdit(null); setOkMsg(data?.unchanged ? 'Nothing was changed.' : 'Details saved. The learner will see them the next time their profile loads.'); onChanged(); load()
   }
   const pr = u?.progress || {}, st = pr.kstate || {}
   const modules = Array.isArray(pr.kdone) ? pr.kdone.filter(Boolean).length : 0
@@ -202,8 +224,22 @@ function UserDrawer({ id, me, onClose, onChanged }) {
                 <h3>{u.full_name || u.username}</h3>
                 <p className="pnl-dim">@{u.username} · {u.email}</p>
                 <div className="pnl-tags">{u.is_admin && <em>admin</em>}{u.suspended && <em className="s">suspended</em>}{isOnline(u.last_seen) && <em className="g">online</em>}</div>
+                {!edit && <button type="button" className="pnl-eb" onClick={startEdit}>Edit details</button>}
               </div>
             </div>
+            {okMsg && <p className="pnl-ok">{okMsg}</p>}
+            {edit && (
+              <form className="pnl-ef" onSubmit={saveEdit}>
+                <label><span>Full name</span><input value={edit.full_name} onChange={setE('full_name')} maxLength={60} /></label>
+                <label><span>Username</span><input value={edit.username} onChange={setE('username')} maxLength={20} autoCapitalize="none" spellCheck="false" /></label>
+                <label><span>Email</span><input type="email" value={edit.email} onChange={setE('email')} maxLength={254} /></label>
+                <label><span>Location</span><input value={edit.location} onChange={setE('location')} maxLength={60} /></label>
+                <label><span>Gender</span><select value={edit.gender} onChange={setE('gender')}><option value="">Not set</option>{Object.entries(GENDER).map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
+                <label><span>Bio</span><textarea rows={3} value={edit.bio} onChange={setE('bio')} maxLength={200} /></label>
+                <small className="pnl-dim">Username: 3 to 20 characters, start with a letter, then letters, numbers or underscores. Changing the email also changes the login email.</small>
+                <div className="pnl-efa"><button type="submit" className="pnl-eb" disabled={busy}>{busy ? 'Saving...' : 'Save changes'}</button><button type="button" className="pnl-btn" onClick={() => setEdit(null)} disabled={busy}>Cancel</button></div>
+              </form>
+            )}
             <dl className="pnl-kv">
               <div><dt>Joined</dt><dd>{day(u.created_at)}</dd></div>
               <div><dt>Last seen</dt><dd>{isOnline(u.last_seen) ? 'Online now' : ago(u.last_seen)}</dd></div>
@@ -523,7 +559,7 @@ function Users({ me }) {
     if (error) setErr('Could not load users.'); else { setErr(''); setRows(data); setTotal(count || 0) }
   }, [q, filter, page, size])
   useEffect(() => { const t = setTimeout(load, 250); return () => clearTimeout(t) }, [load])
-  useEffect(() => { const t = setInterval(load, 30000); return () => clearInterval(t) }, [load])
+  useLive(load, 15000, false)
   const act = async (id, body, ask) => {
     if (ask && !(await confirm(ask))) return
     setBusy(id); setErr('')
@@ -608,7 +644,7 @@ function Payments() {
     load()
   }, [load])
   const swept = useRef(false)
-  useEffect(() => { load(); const t = setInterval(load, 30000); return () => clearInterval(t) }, [load])
+  useLive(load)
   // Once per visit: if anything has been pending for more than 2 minutes, check it with Paystack automatically.
   useEffect(() => {
     if (!rows || swept.current) return
@@ -699,38 +735,114 @@ function Payments() {
 }
 
 const TOPIC = { general: 'General', billing: 'Billing', bug: 'Bug', feedback: 'Feedback', partnership: 'Partnership' }
+const MSG_ST = { new: 'New', replied: 'Replied', closed: 'Closed' }
 function Messages() {
   const [rows, setRows] = useState(null)
   const [err, setErr] = useState('')
-  useEffect(() => {
-    supabase.from('contact_messages').select('id,name,email,topic,message,created_at').order('created_at', { ascending: false }).limit(500)
-      .then(({ data, error }) => (error ? setErr('Could not load messages.') : setRows(data)))
+  const [f, setF] = useState('all')
+  const [q, setQ] = useState('')
+  const [sel, setSel] = useState(null)
+  const [reps, setReps] = useState([])
+  const [txt, setTxt] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState('')
+  const [ok, setOk] = useState('')
+  const st = (m) => m.status || 'new'
+  const load = useCallback(async () => {
+    const { data, error } = await supabase.from('contact_messages').select('*').order('created_at', { ascending: false }).limit(500)
+    if (error) setErr('Could not load messages.'); else { setErr(''); setRows(data) }
   }, [])
-  const pg = usePager(rows)
+  useLive(load)
+  const loadReps = useCallback(async (id) => {
+    const { data } = await supabase.from('contact_replies').select('id,body,sent_by_name,created_at').eq('message_id', id).order('created_at', { ascending: true })
+    setReps(data || [])
+  }, [])
+  const open = (m) => { setSel(m.id); setTxt(''); setNote(''); setOk(''); setReps([]); loadReps(m.id) }
+  const cur = rows && rows.find((m) => m.id === sel)
+  const counts = useMemo(() => { const c = { all: 0, new: 0, replied: 0, closed: 0 }; (rows || []).forEach((m) => { c.all++; c[st(m)]++ }); return c }, [rows])
+  const shown = useMemo(() => {
+    const t = q.trim().toLowerCase()
+    return (rows || []).filter((m) => (f === 'all' || st(m) === f) && (!t || (m.name + ' ' + m.email + ' ' + m.message).toLowerCase().includes(t)))
+  }, [rows, f, q])
+  const pg = usePager(shown, f + q)
+  const send = async (e) => {
+    e && e.preventDefault()
+    if (!cur || busy || txt.trim().length < 2) return
+    setBusy(true); setNote(''); setOk('')
+    const { data, error } = await supabase.functions.invoke('message-reply', { body: { id: cur.id, body: txt.trim() } })
+    setBusy(false)
+    if (error || data?.error) return setNote(await fnMsg(error, data, 'Could not send the reply. Please try again.'))
+    setTxt(''); setOk('Reply sent to ' + cur.email + '.'); load(); loadReps(cur.id)
+  }
+  const setStatus = async (status) => {
+    if (!cur) return
+    setNote(''); setOk('')
+    const { error } = await supabase.rpc('message_set_status', { p_id: cur.id, p_status: status })
+    if (error) return setNote('Could not change the status. Did you run supabase/upgrade-messages.sql?')
+    load()
+  }
   if (err) return <p className="pnl-err">{err}</p>
   if (!rows) return <p className="pnl-dim">Loading messages...</p>
-  if (!rows.length) return <p className="pnl-dim">No messages yet.</p>
+  if (cur) {
+    const s = st(cur)
+    return (
+      <div className="pnl-mq">
+        <header className="pnl-mqh">
+          <button type="button" className="pnl-btn" onClick={() => setSel(null)}>&lsaquo; All messages</button>
+          <div><b>{cur.name}</b><small>{cur.email} · {TOPIC[cur.topic] || cur.topic} · {when(cur.created_at)}</small></div>
+          <span className={'pnl-pill mq-' + s}>{MSG_ST[s]}</span>
+        </header>
+        <div className="pnl-mqb">
+          <div className="pnl-bub them"><p>{cur.message}</p><time>{when(cur.created_at)}</time></div>
+          {reps.map((r) => <div key={r.id} className="pnl-bub me"><p>{r.body}</p><time>{r.sent_by_name ? '@' + r.sent_by_name + ' · ' : ''}{when(r.created_at)}</time></div>)}
+        </div>
+        {note && <p className="pnl-err">{note}</p>}
+        {ok && <p className="pnl-ok">{ok}</p>}
+        {s === 'closed' ? (
+          <p className="pnl-dim pnl-mqc">This message is closed. <button type="button" className="pnl-btn" onClick={() => setStatus('new')}>Reopen</button></p>
+        ) : (
+          <form className="pnl-tkf" onSubmit={send}>
+            <textarea rows={3} maxLength={4000} value={txt} placeholder={`Write your reply. It will be emailed to ${cur.email}.`} aria-label="Reply" onChange={(e) => setTxt(e.target.value)} />
+            <div className="pnl-mqa">
+              <button type="submit" className="pnl-btn pnl-send" disabled={busy || txt.trim().length < 2}>{busy ? 'Sending...' : 'Send reply'}</button>
+              <button type="button" className="pnl-btn warn" onClick={() => setStatus('closed')}>Close</button>
+            </div>
+          </form>
+        )}
+      </div>
+    )
+  }
   return (
     <>
-    <div className="pnl-tw"><table className="pnl-tbl">
-      <thead><tr><th>Date</th><th>From</th><th>Topic</th><th>Message</th><th className="r">Reply</th></tr></thead>
-      <tbody>
-        {pg.rows.map((m) => (
-          <tr key={m.id}>
-            <td className="nw">{day(m.created_at)}<small>{ago(m.created_at)}</small></td>
-            <td><b>{m.name}</b><small>{m.email}</small></td>
-            <td><span className="pnl-pill">{TOPIC[m.topic] || m.topic}</span></td>
-            <td className="msg">{m.message}</td>
-            <td className="r"><a className="pnl-btn" href={`mailto:${m.email}?subject=${encodeURIComponent('Re: your message to Shellwise')}`}>Reply</a></td>
-          </tr>
-        ))}
-      </tbody>
-    </table></div>
-    <Pager {...pg.props} />
+      <div className="pnl-filters">
+        <div className="pnl-chips" role="group" aria-label="Filter by status">
+          {[['all', 'All'], ['new', 'New'], ['replied', 'Replied'], ['closed', 'Closed']].map(([v, t]) => <button key={v} type="button" className={f === v ? 'on' : ''} onClick={() => setF(v)}>{t} ({counts[v]})</button>)}
+        </div>
+        <label><span>Search</span><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name, email or text" /></label>
+      </div>
+      {!shown.length ? <p className="pnl-dim">{rows.length ? 'No messages match.' : 'No messages yet.'}</p> : (
+        <>
+          <div className="pnl-tw"><table className="pnl-tbl">
+            <thead><tr><th>Date</th><th>From</th><th>Topic</th><th>Message</th><th>Status</th><th className="r">Reply</th></tr></thead>
+            <tbody>
+              {pg.rows.map((m) => (
+                <tr key={m.id}>
+                  <td className="nw">{day(m.created_at)}<small>{ago(m.created_at)}</small></td>
+                  <td><b>{m.name}</b><small>{m.email}</small></td>
+                  <td><span className="pnl-pill">{TOPIC[m.topic] || m.topic}</span></td>
+                  <td className="msg">{m.message}</td>
+                  <td><span className={'pnl-pill mq-' + st(m)}>{MSG_ST[st(m)]}</span></td>
+                  <td className="r"><button type="button" className="pnl-btn" onClick={() => open(m)}>{st(m) === 'new' ? 'Reply' : 'Open'}</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+          <Pager {...pg.props} />
+        </>
+      )}
     </>
   )
 }
-
 
 // ---- Subscriptions: active, expired and cancelled ----
 // "Expired" = the paid period has ended. "Cancelled" = stopped renewing but still inside the period they paid for.
@@ -747,9 +859,9 @@ function Subscriptions() {
   const [err, setErr] = useState('')
   const [f, setF] = useState('all')
   const [q, setQ] = useState('')
-  useEffect(() => {
-    let off = false
-    ;(async () => {
+  const load = useCallback(async () => {
+    const off = false
+    {
       const { data, error } = await supabase.from('subscriptions').select('user_id,plan,interval,status,current_period_end,updated_at').order('updated_at', { ascending: false }).limit(1000)
       if (off) return
       if (error) return setErr('Could not load subscriptions.')
@@ -764,9 +876,9 @@ function Subscriptions() {
       }
       const startOf = (x) => paid[x.user_id] || (x.current_period_end ? new Date(x.current_period_end).getTime() - (x.interval === 'yearly' ? 366 : 31) * 86400000 : 0)
       if (!off) setRows((data || []).map((x) => ({ ...x, who: names[x.user_id], state: subState(x), start: startOf(x) })))
-    })()
-    return () => { off = true }
+    }
   }, [])
+  useLive(load)
   const counts = useMemo(() => { const c = { all: 0, active: 0, expired: 0, cancelled: 0, past_due: 0 }; (rows || []).forEach((r) => { c.all++; c[r.state]++ }); return c }, [rows])
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase()
@@ -994,7 +1106,7 @@ function Bell({ onGo }) {
       </button>
       {open && (
         <div className="pnl-pop" role="dialog" aria-label="Notifications">
-          <div className="pnl-pophd"><b>Notifications</b>{unread > 0 && <button onClick={markAll}>Mark all read</button>}</div>
+          <div className="pnl-pophd"><b>Notifications</b><span className="pnl-pophr">{unread > 0 && <button onClick={markAll}>Mark all read</button>}<button type="button" className="pnl-popx" aria-label="Close notifications" onClick={() => setOpen(false)}>&times;</button></span></div>
           <div className="pnl-alr">
             <button onClick={toggleSound}>Sound: {sound ? 'on' : 'off'}</button>
             {perm === 'default' && <button onClick={askPerm}>Enable browser alerts</button>}
@@ -1031,7 +1143,7 @@ function Announcements() {
     const { data, error } = await supabase.from('announcements').select('id,message,tone,active,expires_at,created_at,snooze_hours').order('created_at', { ascending: false }).limit(200)
     if (error) setErr('Could not load announcements. Did you run supabase/upgrade-growth.sql and upgrade-growth2.sql?'); else { setErr(''); setRows(data) }
   }, [])
-  useEffect(() => { load() }, [load])
+  useLive(load)
   const post = async (e) => {
     e.preventDefault()
     const m = msg.trim()
@@ -1132,7 +1244,7 @@ function PrivateMessages() {
     if (ids.length) { const { data: ps } = await supabase.from('profiles').select('id,username').in('id', ids); (ps || []).forEach((p) => { names[p.id] = p.username }) }
     setRows((data || []).map((m) => ({ ...m, who: names[m.user_id] || 'deleted user' })))
   }, [])
-  useEffect(() => { load() }, [load])
+  useLive(load)
   useEffect(() => {
     const term = q.trim().replace(/[%,()*\\]/g, '').slice(0, 60)
     if (to || term.length < 2) { setFound([]); return }
@@ -1207,7 +1319,7 @@ function Coupons() {
     const { data, error } = await supabase.from('coupons').select('code,percent,max_uses,uses,expires_at,active,owner_id,note,created_at').order('created_at', { ascending: false }).limit(200)
     if (error) setErr('Could not load coupons. Did you run supabase/upgrade-growth.sql?'); else { setErr(''); setRows(data) }
   }, [])
-  useEffect(() => { load() }, [load])
+  useLive(load)
   const set = (k) => (e) => setF((v) => ({ ...v, [k]: k === 'code' ? e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24) : e.target.value }))
   const add = async (e) => {
     e.preventDefault()
@@ -1265,7 +1377,7 @@ function Coupons() {
   )
 }
 
-const AUDIT_ACT = { plan_changed: ['Plan changed', ''], suspended: ['Suspended', 'failed'], restored: ['Restored', 'success'], deleted: ['Deleted', 'failed'], self_deleted: ['Deleted by user', 'failed'], plan_expired: ['Plan ended', 'pending'], payment_verified: ['Payment confirmed', 'success'], password_reset: ['Password reset', 'pending'] }
+const AUDIT_ACT = { plan_changed: ['Plan changed', ''], suspended: ['Suspended', 'failed'], restored: ['Restored', 'success'], deleted: ['Deleted', 'failed'], self_deleted: ['Deleted by user', 'failed'], plan_expired: ['Plan ended', 'pending'], payment_verified: ['Payment confirmed', 'success'], password_reset: ['Password reset', 'pending'], message_replied: ['Message replied', 'success'], profile_edited: ['Details edited', ''], message_closed: ['Message closed', ''], message_new: ['Message reopened', ''] }
 const AUDIT_FILTER = [['all', 'All'], ['plan_changed', 'Plan changed'], ['suspended', 'Suspended'], ['restored', 'Restored'], ['deleted', 'Deleted'], ['self_deleted', 'Deleted by user'], ['plan_expired', 'Plan ended'], ['payment_verified', 'Payment confirmed'], ['password_reset', 'Password reset']]
 function Audit() {
   const [rows, setRows] = useState(null)
@@ -1281,7 +1393,7 @@ function Audit() {
     const { data, error, count } = await req
     if (error) setErr('Could not load the audit log. Did you run supabase/upgrade-growth2.sql?'); else { setErr(''); setRows(data); setTotal(count || 0) }
   }, [filter, page, size])
-  useEffect(() => { load() }, [load])
+  useLive(load)
   return (
     <>
       <div className="pnl-tools">
@@ -1328,7 +1440,11 @@ export default function Admin() {
   }, [])
   useEffect(() => {
     if (!allowed) return
-    loadOv(); const t = setInterval(loadOv, 30000); return () => clearInterval(t)
+    loadOv()
+    const tick = () => { if (!document.hidden) loadOv() }
+    const t = setInterval(tick, 15000)
+    document.addEventListener('visibilitychange', tick); window.addEventListener('focus', tick)
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', tick); window.removeEventListener('focus', tick) }
   }, [allowed, loadOv])
   const loadTk = useCallback(async () => {
     const { count, error } = await supabase.from('support_tickets').select('id', { count: 'exact', head: true }).eq('status', 'open').eq('unread_admin', true)
@@ -1336,7 +1452,7 @@ export default function Admin() {
   }, [])
   useEffect(() => {
     if (!allowed) return
-    loadTk(); const t = setInterval(loadTk, 20000); return () => clearInterval(t)
+    loadTk(); const t = setInterval(loadTk, 10000); return () => clearInterval(t)
   }, [allowed, loadTk])
   // Phone menu: the sidebar becomes a drawer that slides in from the left.
   const [range, setRange] = useState(6) // months shown on the Dashboard

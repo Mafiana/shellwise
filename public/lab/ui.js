@@ -74,29 +74,38 @@ R.quiz=()=>{const t=Object.keys(qb()).length;
  [['all','All'],['topic','Topics'],['mod','Modules'],['open','Unlocked']],'Search quizzes…')};
 let QZS=null;
 window.qzStart=id=>{const s=setById(id);if(!s||s.locked)return;const pool=s.qs();if(!pool.length)return;
- QZS={s,qs:shuf(pool).slice(0,10),i:0,score:0,streak:0,best:0,wrong:[],ans:false};qzShow()};
+ if(QZS&&QZS.tm)clearInterval(QZS.tm);
+ QZS={s,qs:shuf(pool).slice(0,25),i:0,score:0,streak:0,best:0,wrong:[],ans:false,log:[],left:120};
+ const z=QZS;z.tm=setInterval(()=>{if(QZS!==z||z.over){clearInterval(z.tm);return}z.left--;qzClock();if(z.left<=0){clearInterval(z.tm);qzEnd(true)}},1000);qzShow()};
+const qzFmt=t=>Math.floor(Math.max(0,t)/60)+':'+String(Math.max(0,t)%60).padStart(2,'0');
+function qzClock(){const z=QZS,e=document.getElementById('qzt');if(!z||!e)return;e.textContent='⏱ '+qzFmt(z.left);e.classList.toggle('warn',z.left<=20)}
 function qzShow(){
  const z=QZS,el=pvEl();
  if(z.i>=z.qs.length)return qzEnd();
  const q=z.qs[z.i];z.opts=shuf(q.slice(1));z.ans=false;
- el.innerHTML=`<div class=qz><div class=qz-top><button class="btn ghost" onclick="qzQuit()">✕ Quit</button><div class=qz-t>${z.s.ic} ${esc(z.s.t)}</div><div class=qz-s>${z.streak>1?'🔥 '+z.streak+' · ':''}${z.score}/${z.i} correct</div></div><div class=qz-bar><i style="width:${z.i/z.qs.length*100}%"></i></div><div class=dim>Question ${z.i+1} of ${z.qs.length}</div><h3 class=qz-q>${esc(q[0])}</h3><div id=qo>${z.opts.map((o,i)=>`<button class=opt onclick="qzAns(${i})"><span class=kb>${i+1}</span>${esc(o)}</button>`).join('')}</div><div id=qf></div></div>`;
+ el.innerHTML=`<div class=qz><div class=qz-top><button class="btn ghost" onclick="qzQuit()">✕ Quit</button><div class=qz-t>${z.s.ic} ${esc(z.s.t)}</div><div class="xt-tm" id=qzt>⏱ ${qzFmt(z.left)}</div><div class=qz-s>${z.streak>1?'🔥 '+z.streak+' · ':''}${z.score}/${z.i} correct</div></div><div class=qz-bar><i style="width:${z.i/z.qs.length*100}%"></i></div><div class=dim>Question ${z.i+1} of ${z.qs.length}</div><h3 class=qz-q>${esc(q[0])}</h3><div id=qo>${z.opts.map((o,i)=>`<button class=opt onclick="qzAns(${i})"><span class=kb>${i+1}</span>${esc(o)}</button>`).join('')}</div><div id=qf></div></div>`;
  el.scrollTop=0}
 window.qzAns=i=>{const z=QZS;if(!z||z.ans)return;z.ans=true;const q=z.qs[z.i],ok=z.opts[i]==q[1];
  document.querySelectorAll('#qo .opt').forEach((b,j)=>{b.disabled=true;if(z.opts[j]==q[1])b.classList.add('right');else if(j==i)b.classList.add('wrong')});
+ z.log[z.i]={picked:z.opts[i]};
  if(ok){z.score++;z.streak++;z.best=Math.max(z.best,z.streak);S.qc++;gain(5);beep(880,.08)}else{z.streak=0;z.wrong.push(q);beep(200,.2)}
  const last=z.i+1>=z.qs.length;
  document.getElementById('qf').innerHTML=`<div class="fb ${ok?'ok':'bad'}">${ok?'✔ Correct! +5 XP':'✘ Not quite. The answer is: <b>'+esc(q[1])+'</b>'}</div><button class=btn id=qn onclick="qzNext()">${last?'See results':'Next question ›'}</button> <span class=dim>or press Enter</span>`;
  const nb=document.getElementById('qn');if(nb)nb.focus()};
 window.qzNext=()=>{if(!QZS)return;QZS.i++;qzShow()};
-window.qzQuit=()=>{QZS=null;go('quiz')};
-function qzEnd(){
- const z=QZS,n=z.qs.length,pc=Math.round(z.score/n*100),el=pvEl();
+window.qzQuit=()=>{if(QZS&&QZS.tm)clearInterval(QZS.tm);QZS=null;go('quiz')};
+window.qzRev=()=>{const b=document.getElementById('qrv'),t=document.getElementById('qrb');if(!b||!t)return;const o=b.hidden;b.hidden=!o;t.textContent=o?'🙈 Hide correct answers':'📖 Show correct answers'};
+function qzEnd(late){
+ const z=QZS;if(!z||z.over)return;clearInterval(z.tm);z.over=true;
+ if(late===true)z.wrong=z.qs.filter((q,k)=>z.log[k]&&z.log[k].picked!==q[1]);
+ const n=z.qs.length,pc=Math.round(z.score/n*100),el=pvEl();
  const b=qb()[z.s.id]||{best:0,of:n,pct:0};if(pc>=b.pct)qb()[z.s.id]={best:z.score,of:n,pct:pc};
  let bonus='';if(z.score==n&&n>=3){gain(20);S.perf=(S.perf||0)+1;bonus='<div class="fb ok">🏆 Perfect score! +20 XP bonus</div>'}
  badges();sv();
  const msg=pc==100?'Flawless!':pc>=80?'Great work!':pc>=60?'Good effort, review the misses.':'Keep practising, you will get there.';
- el.innerHTML=`<div class=qz><h2>Quiz complete</h2><div class=res><div class=ring style="--p:${pc}"><b>${pc}%</b></div><div><h3>${msg}</h3><p>${z.score} of ${n} correct · best streak ${z.best}</p><p class=dim>${esc(z.s.t)}</p></div></div>${bonus}${z.wrong.length?`<h3>Review your misses</h3>${z.wrong.map(q=>`<div class=miss><div>${esc(q[0])}</div><div class=ok>✔ ${esc(q[1])}</div></div>`).join('')}`:''}<div class=md-act><button class=btn onclick="qzStart('${z.s.id}')">↻ Try again</button><button class="btn ghost" onclick="qzQuit()">All quizzes</button></div></div>`;
- el.scrollTop=0;QZS.over=true}
+ const rev=z.qs.map((q,k)=>{const l=z.log[k],ok=l&&l.picked===q[1];return `<div class=miss style="border-left-color:${ok?'var(--ok)':'var(--bad)'}"><div><b>${k+1}.</b> ${esc(q[0])}</div><div class=ok>✔ ${esc(q[1])}</div>${l?(ok?'':`<div style="color:var(--bad)">✘ Your answer: ${esc(l.picked)}</div>`):'<div class=dim>Not answered</div>'}</div>`}).join('');
+ el.innerHTML=`<div class=qz><h2>${late===true?'⏱ Time is up!':'Quiz complete'}</h2><div class=res><div class=ring style="--p:${pc}"><b>${pc}%</b></div><div><h3>${msg}</h3><p>${z.score} of ${n} correct${late===true?' · '+(n-z.log.filter(Boolean).length)+' unanswered':''} · best streak ${z.best}</p><p class=dim>${esc(z.s.t)}</p></div></div>${bonus}${z.wrong.length?`<h3>Review your misses</h3>${z.wrong.map(q=>`<div class=miss><div>${esc(q[0])}</div><div class=ok>✔ ${esc(q[1])}</div></div>`).join('')}`:''}<div class=md-act><button class="btn xt-quit" id=qrb onclick="qzRev()">📖 Show correct answers</button></div><div id=qrv hidden><h3>Correct answers</h3>${rev}</div><div class=md-act><button class=btn onclick="qzStart('${z.s.id}')">↻ Try again</button><button class="btn ghost" onclick="qzQuit()">All quizzes</button></div></div>`;
+ el.scrollTop=0}
 document.addEventListener('keydown',e=>{
  if(!QZS||curV!='quiz'||QZS.over)return;
  if(/^[1-4]$/.test(e.key)&&!QZS.ans&&QZS.opts&&QZS.opts[+e.key-1]!==undefined)qzAns(+e.key-1);

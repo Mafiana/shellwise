@@ -43,6 +43,42 @@ async function handle(req: Request): Promise<Response> {
     await log('password_reset') // the password itself is never written to the log
     return json({ ok: true })
   }
+  if (action === 'update_profile') {
+    const f = (body.fields && typeof body.fields === 'object') ? body.fields : {}
+    const str = (v: unknown, max: number) => String(v ?? '').trim().slice(0, max)
+    const upd: Record<string, unknown> = {}
+    const changed: string[] = []
+    if ('full_name' in f) { const v = str(f.full_name, 60); upd.full_name = v; changed.push('name') }
+    if ('location' in f) { const v = str(f.location, 60); upd.location = v; changed.push('location') }
+    if ('bio' in f) { const v = str(f.bio, 200); upd.bio = v; changed.push('bio') }
+    if ('gender' in f) {
+      if (!['', 'male', 'female', 'other', 'prefer_not'].includes(String(f.gender))) return json({ error: 'bad gender' }, 400)
+      upd.gender = String(f.gender); changed.push('gender')
+    }
+    if ('username' in f) {
+      const u = str(f.username, 20).toLowerCase()
+      if (!/^[a-z][a-z0-9_]{2,19}$/.test(u)) return json({ error: 'Username: 3 to 20 characters, start with a letter, then letters, numbers or underscores.' }, 400)
+      if (u !== target.username) {
+        const { data: t } = await db.from('profiles').select('id').eq('username', u).maybeSingle()
+        if (t && t.id !== user_id) return json({ error: 'That username is taken.' }, 400)
+        upd.username = u; changed.push('username')
+      }
+    }
+    if ('email' in f) {
+      const e = str(f.email, 254).toLowerCase()
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return json({ error: 'Enter a valid email address.' }, 400)
+      if (e !== String(target.email ?? '').toLowerCase()) {
+        const { error: ee } = await db.auth.admin.updateUserById(user_id, { email: e, email_confirm: true })
+        if (ee) return json({ error: /already|registered|exists|taken/i.test(ee.message) ? 'That email is already used by another account.' : 'Could not change the email.' }, 400)
+        upd.email = e; changed.push('email')
+      }
+    }
+    if (!changed.length) return json({ ok: true, unchanged: true })
+    const { error } = await db.from('profiles').update(upd).eq('id', user_id)
+    if (error) return json({ error: /unique|duplicate/i.test(error.message) ? 'That username or email is already in use.' : 'could not update' }, 400)
+    await log('profile_edited', 'Changed: ' + changed.join(', '))
+    return json({ ok: true })
+  }
   if (action === 'set_suspended') {
     if (typeof body.suspended !== 'boolean') return json({ error: 'bad value' }, 400)
     if (target.is_admin || user_id === caller.id) return json({ error: 'admins cannot be suspended' }, 400)
