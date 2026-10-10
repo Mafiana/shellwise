@@ -5,7 +5,7 @@
  const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const clean=(v,n)=>String(v==null?'':v).replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,n);
  const PLAN={free:'Free',learner:'Learner',pro:'Pro'};
-    const GEN={male:'Male',female:'Female',other:'Other',prefer_not:'Prefer not to say'};
+ const GEN={male:'Male',female:'Female',other:'Other',prefer_not:'Prefer not to say'};
  const AVRE=/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]{1,79000}$/;
  function load(){let o=null;try{o=JSON.parse(localStorage.getItem(KU)||'null')}catch(e){}
   if(!o||typeof o!='object'||Array.isArray(o)||o.guest)return{guest:true,name:'Guest',user:'',since:o&&+o.since>0?+o.since:0};
@@ -30,6 +30,13 @@
  paint();window.addEventListener('kuser',paint);window.addEventListener('storage',e=>{if(e.key==KU)paint()});
  // ---- profile page (a normal view in the app, like Progress)
  function seg(into){const n=20,f=Math.floor(into/5);return Array.from({length:n},(_,i)=>`<i class="${i<f?'f':''}"></i>`).join('')}
+ const PI={
+  pin:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"/></svg>',
+  spark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M13 3l1.7 4.6L19 9.3l-4.3 1.7L13 15.5l-1.7-4.5L7 9.3l4.3-1.7L13 3Z"/><path d="M6 15l.8 2.2L9 18l-2.2.8L6 21l-.8-2.2L3 18l2.2-.8L6 15Z"/></svg>',
+  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01"/></svg>',
+  mail:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7.5 8.5 6 8.5-6"/></svg>',
+  pen:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l4-1 11-11a2.1 2.1 0 0 0-3-3L5 16l-1 4Z"/><path d="m14.5 6.5 3 3"/></svg>',
+  out:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H6.5A2.5 2.5 0 0 0 4 6.5v11A2.5 2.5 0 0 0 6.5 20H10"/><path d="M15 8l4 4-4 4M19 12H9"/></svg>'};
  let editing=false,draft=null;
  R.profile=function(){const u=load(),s=stats();if(editing&&!u.guest)return editForm(u);
   const since=u.since?new Date(u.since).toLocaleDateString(undefined,{month:'long',year:'numeric'}):'';
@@ -37,12 +44,15 @@
   const earned=bg.filter(b=>b.on).length;
   const rows=[['Modules finished',`${s.dn} <em>of ${s.mt}</em>`],['Correct quiz answers',s.qc],['Games won',s.gw],['Badges earned',`${earned} <em>of ${bg.length}</em>`]];
   return `<div class="pf" style="--g:${grad(u)}">
-   <header class="pf-top"><div class="pf-id">
-     <div class="pf-avw"><div class="pf-av" ${u.avatar?'':'aria-hidden="true"'}>${u.avatar?`<img src="${u.avatar}" alt="Profile photo of ${esc(u.user)}">`:PERSON}</div>${u.guest?'':`<div class="pf-avb"><button type="button" class="btn ghost" id="pfup">${u.avatar?'Change photo':'Upload photo'}</button>${u.avatar?'<button type="button" class="btn ghost" id="pfrm">Remove</button>':''}</div><input type="file" id="pffile" accept="image/png,image/jpeg,image/webp" hidden><p class="pf-aer" id="pfaer" role="alert"></p>`}</div>
-     <div class="pf-who"><h2>${u.guest?'Guest':esc(u.name)}</h2><p class="pf-han">${u.guest?'Not signed in':'@'+esc(u.user)}${u.loc?` · <span class="pf-loc">📍 ${esc(u.loc)}</span>`:''}</p>${u.bio?`<p class="pf-bio">${esc(u.bio)}</p>`:''}
-      <ul class="pf-tags"><li class="${u.guest?'':'pl-'+esc(u.plan)}">${u.guest?'Guest session':PLAN[u.plan]+' plan'}</li>${since?`<li>${u.guest?'Started':'Member since'} ${esc(since)}</li>`:''}${u.guest?'':`<li>${esc(u.email)}</li>`}${!u.guest&&u.gender?`<li>${GEN[u.gender]}</li>`:''}</ul></div></div>
-    <div class="pf-act">${u.guest?'<button class="btn" data-pa="signup">Create a free account</button><button class="btn ghost" data-pa="login">Log in</button>':'<button class="btn" id="pfedit">Edit profile</button><button class="btn ghost" data-pa="out">Sign out</button>'}</div>
+   <header class="pf-hd">
+    <div class="pf-avc"><div class="pf-ring"><div class="pf-av" ${u.avatar?'':'aria-hidden="true"'}>${u.avatar?`<img src="${u.avatar}" alt="Profile photo of ${esc(u.user)}">`:PERSON}</div>${u.guest?'':'<span class="pf-on" title="Online" aria-label="Online"></span>'}</div></div>
+    <div class="pf-who"><h2>${u.guest?'Guest':esc(u.name)}</h2>
+     <p class="pf-sub">${u.guest?'<span class="pf-han">Not signed in</span>':`<span class="pf-role">${esc(u.bio||'Shellwise learner')}</span><i class="pf-dot" aria-hidden="true"></i><span class="pf-han">@${esc(u.user)}</span>`}</p>
+     ${u.loc?`<p class="pf-loc2">${PI.pin}<span>${esc(u.loc)}</span></p>`:''}
+     <ul class="pf-pills"><li class="${u.guest?'pl-guest':'pl-'+esc(u.plan)}">${PI.spark}<span>${u.guest?'Guest session':PLAN[u.plan]+' plan'}</span></li>${since?`<li class="pf-since">${PI.cal}<span>${u.guest?'Started':'Member since'} ${esc(since)}</span></li>`:''}</ul></div>
    </header>
+   ${u.guest?'':`<div class="pf-info"><div><span class="pf-ic">${PI.mail}</span><span class="pf-it">${esc(u.email)}</span></div><div><span class="pf-ic">${PERSON}</span><span class="pf-it${u.gender?'':' pf-none'}">${u.gender?GEN[u.gender]:'Not set'}</span></div></div>`}
+   <div class="pf-act">${u.guest?`<button type="button" class="pf-big" data-pa="signup"><span>Create a free account</span></button><button type="button" class="pf-alt" data-pa="login"><span>Log in</span></button>`:`<button type="button" class="pf-big" id="pfedit">${PI.pen}<i class="pf-sep"></i><span>Edit profile</span></button><button type="button" class="pf-out" data-pa="out">${PI.out}<i class="pf-sep"></i><span>Sign out</span></button>`}</div>
    ${u.guest?'<p class="pf-hint">You are using Shellwise as a guest. Your progress is saved in this browser only. An account gives you a username and a profile to come back to.</p>':''}
    <div class="pf-cols">
     <section class="pf-lv"><h3>Level</h3><div class="pf-num">${s.lvl}</div><div class="pf-seg" role="img" aria-label="${s.into} of 100 XP towards level ${s.lvl+1}">${seg(s.into)}</div><p>${s.xp} XP in total. ${100-s.into} XP to level ${s.lvl+1}.</p></section>
@@ -58,7 +68,7 @@
     <label>Full name<input id="pfn" maxlength="60" autocomplete="name" value="${esc(d.name)}"></label>
     <label>Username<input value="@${esc(u.user)}" disabled></label>
     <label>Location<input id="pfl" maxlength="60" placeholder="City, Country" autocomplete="address-level2" value="${esc(d.loc)}"></label>
-          <label>Gender<select id="pfg"><option value="">Select gender</option>${Object.keys(GEN).map(k=>`<option value="${k}"${d.gender==k?' selected':''}>${GEN[k]}</option>`).join('')}</select></label>
+    <label>Gender<select id="pfg"><option value="">Select gender</option>${Object.keys(GEN).map(k=>`<option value="${k}"${d.gender==k?' selected':''}>${GEN[k]}</option>`).join('')}</select></label>
     <label>Bio<textarea id="pfb" maxlength="200" rows="4" placeholder="Tell people a little about you">${esc(d.bio)}</textarea><small id="pfc">${d.bio.length} / 200</small></label>
     <p class="pf-aer" id="pfer" role="alert"></p>
     <div class="pf-fa"><button class="btn" type="submit">Save changes</button><button class="btn ghost" type="button" id="pfcx">Cancel</button></div>

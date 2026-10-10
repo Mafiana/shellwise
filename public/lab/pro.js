@@ -93,20 +93,22 @@
   <div class="ms-bar"><i style="width:${q.n/q.total*100}%"></i></div><p class=dim>${q.n} of ${q.total} modules finished${q.n==q.total?'. Path complete.':'.'}</p>
   <ol class="ms-steps">${p.m.filter(i=>i<M.length).map((i,k)=>`<li class="${done[i]?'ok':i==q.next?'now':''}"><button onclick="modOpen(${i})"><i>${done[i]?'✔':k+1}</i><span><b>${esc(M[i].n)}</b><small>Module ${i+1} · ${esc((M[i].c||[]).slice(0,4).join(', '))}</small></span><em>${done[i]?'Done':i==q.next?'Up next':''}</em></button></li>`).join('')}</ol></div>`};
  let PL=null;
- window.plStart=function(){if(!gate('paths'))return;PL={qs:D.place.map(q=>({t:q[0],q:q[1],c:q[2],o:shuf(q.slice(2)),pick:-1})),i:0};plShow()};
+ window.plStart=function(){if(!gate('paths'))return;PL={qs:D.place.map(q=>({t:q[0],q:q[1],c:q[2],o:shuf(q.slice(2)),pick:-1})),i:0,left:72,tot:72};
+  PL.tm=setInterval(()=>{const z=PL;if(!z)return clearInterval(z&&z.tm);if(!$('#plt')){clearInterval(z.tm);PL=null;return}z.left--;plPaint();if(z.left<=0){clearInterval(z.tm);plEnd(true)}},1000);plShow()};
+ function plPaint(){const z=PL;if(!z)return;const e=$('#plt'),b=$('#pltb'),c=$('#plc');if(!e)return;const l=Math.max(0,z.left);e.textContent=Math.floor(l/60)+':'+String(l%60).padStart(2,'0');if(b)b.style.width=(l/z.tot*100)+'%';if(c)c.className='pl-clock'+(l<=10?' red':l<=30?' amb':'')}
  function plShow(){
   const z=PL;if(!z)return;if(z.i>=z.qs.length)return plEnd();const x=z.qs[z.i];
-  pv().innerHTML=`<div class=qz><div class=qz-top><button class="btn ghost" onclick="plQuit()">✕ Quit</button><div class=qz-t>🎯 Placement test</div><div class=qz-s>${z.i+1}/${z.qs.length}</div></div><div class=qz-bar><i style="width:${z.i/z.qs.length*100}%"></i></div>
+  pv().innerHTML=`<div class=qz><div class=qz-top><button class="btn ghost" onclick="plQuit()">✕ Quit</button><div class=qz-t>🎯 Placement test</div><div class=qz-s>${z.i+1}/${z.qs.length}</div><div id=plc class=pl-clock><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg><b id=plt></b></div></div><div class=pl-tb><i id=pltb></i></div><div class=qz-bar><i style="width:${z.i/z.qs.length*100}%"></i></div>
   <h3 class=qz-q>${esc(x.q)}</h3><div id="plo">${x.o.map((o,k)=>`<button class="opt" onclick="plPick(${k})">${esc(o)}</button>`).join('')}</div></div>`;
-  const b=$('#plo .opt');if(b)b.focus()}
+  plPaint();const b=$('#plo .opt');if(b)b.focus()}
  window.plPick=function(k){const z=PL;if(!z)return;const x=z.qs[z.i];x.pick=k;z.i++;plShow()};
- window.plQuit=function(){PL=null;go('paths')};
- function plEnd(){
-  const z=PL;PL=null;const t={basics:0,inter:0,sec:0};let score=0;z.qs.forEach(x=>{if(x.o[x.pick]==x.c){t[x.t]++;score++}});
+ window.plQuit=function(){if(PL&&PL.tm)clearInterval(PL.tm);PL=null;go('paths')};
+ function plEnd(late){
+  const z=PL;if(!z)return;if(z.tm)clearInterval(z.tm);PL=null;const t={basics:0,inter:0,sec:0};let score=0;z.qs.forEach(x=>{if(x.o[x.pick]==x.c){t[x.t]++;score++}});
   const rec=t.basics<3?'foundations':t.inter<3?'power':t.sec<3?'soc':'pentest';
   const s=pp();s.place={score,rec,t,at:Date.now()};wr('kpath',s);
   const p=D.paths.find(x=>x.id==rec),q=pathProg(p),lv=score<=5?'Beginner':score<=9?'Intermediate':'Advanced';
-  pv().innerHTML=`<div class=qz><h2>Your placement</h2><div class=res><div class=ring style="--p:${Math.round(score/12*100)}"><b>${score}/12</b></div><div><h3>${lv} level</h3><p>Basics ${t.basics}/4 · Intermediate ${t.inter}/4 · Security ${t.sec}/4</p></div></div>
+  pv().innerHTML=`<div class=qz><h2>Your placement</h2><div class=res><div class=ring style="--p:${Math.round(score/12*100)}"><b>${score}/12</b></div><div>${late?'<p class=pl-late>⏱ Time is up! Unanswered questions count as wrong.</p>':''}<h3>${lv} level</h3><p>Basics ${t.basics}/4 · Intermediate ${t.inter}/4 · Security ${t.sec}/4</p></div></div>
   <div class="mc ms-place" style="margin-top:16px"><div><h3>${p.ic} Start with: ${esc(p.name)}</h3><p>${esc(p.d)}</p></div><div class="ms-pa"><button class="btn" onclick="pathOpen('${p.id}')">${q.n?'Continue the path':'Open the path'}</button><button class="btn ghost" onclick="go('paths')">All paths</button></div></div></div>`}
  try{window.addEventListener('beforeunload',()=>{})}catch(e){}
 })();

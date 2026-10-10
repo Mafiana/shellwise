@@ -66,11 +66,132 @@
 .pf-loc{color:var(--mut)}.pf-bio{margin:8px 0 0;max-width:52ch;color:var(--mut);line-height:1.55}
 .pf-ed{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:start;margin-top:14px}
 .pf-form{display:grid;gap:14px;max-width:520px}.pf-form label{display:grid;gap:6px;font-weight:600;font-size:14px}
-.pf-form input,.pf-form textarea,.pf-form select{width:100%;box-sizing:border-box;padding:11px 13px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:inherit;font:inherit}
-.pf-form select{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:38px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%239aa4b2' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
-.pf-form select option{background:#0f1520;color:#e6edf6}.pf-form input:disabled{opacity:.6}.pf-form small{color:var(--mut);justify-self:end}
+.pf-form input,.pf-form textarea{width:100%;box-sizing:border-box;padding:11px 13px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:inherit;font:inherit}
+.pf-form input:disabled{opacity:.6}.pf-form small{color:var(--mut);justify-self:end}
 .pf-fa{display:flex;gap:10px}.pf-fa .btn{margin:0}
 .pf-mini{display:flex;gap:14px;align-items:center;padding:14px 16px;margin-bottom:16px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
 .pf-mini .pav{width:52px;height:52px;flex:none;border-radius:50%;display:grid;place-items:center;overflow:hidden;color:#fff}.pf-mini .pav img{width:100%;height:100%;object-fit:cover}.pf-mini .pav svg{width:26px;height:26px}
 .pf-mini b{display:block;font-size:17px}.pf-mini small{color:var(--mut)}.pf-mini p{margin:4px 0 0;font-size:14px;color:var(--mut)}
 @media(max-width:700px){.pf-ed{grid-template-columns:1fr}}
+
+/* ===== Profile card (clean, rounded, responsive) ===== */
+.pf-hd{display:flex;align-items:center;gap:clamp(22px,4vw,44px);padding:6px 0 0}
+.pf-avc{flex:none;display:flex;flex-direction:column;align-items:center;gap:10px}
+.pf-ring{position:relative;width:clamp(116px,18vw,156px);aspect-ratio:1;border-radius:50%;padding:6px;border:3px solid var(--blue);box-shadow:0 0 30px -8px color-mix(in srgb,var(--blue) 70%,transparent)}
+.pf-ring .pf-av{width:100%;height:100%;border-radius:50%;box-shadow:none}
+.pf-ring .pf-av:before{display:none}
+.pf-ring .pf-av svg{width:46%;height:46%}
+.pf-on{position:absolute;right:2%;bottom:6%;width:clamp(22px,3.4vw,30px);aspect-ratio:1;border-radius:50%;background:#22c55e;border:4px solid var(--body,#07090c);box-shadow:0 0 0 1px #ffffff22}
+.pf-avl{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:13px}
+.pf-avl button{background:none;border:0;padding:0;color:var(--blue);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.pf-avc .pf-aer{text-align:center;max-width:180px}
+.pf-who{min-width:0;flex:1}
+.pf-who h2{margin:0;font-size:clamp(30px,5.2vw,54px);font-weight:800;line-height:1.05;letter-spacing:-.02em;overflow-wrap:anywhere}
+.pf-sub{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:10px 0 0}
+.pf-role{font-size:clamp(16px,2.3vw,22px);font-weight:600;color:color-mix(in srgb,var(--blue) 65%,var(--fg));overflow-wrap:anywhere}
+.pf-han{font-size:clamp(16px,2.3vw,22px);font-weight:600;color:var(--blue)}
+.pf-dot{width:5px;height:5px;border-radius:50%;background:var(--dim);flex:none}
+.pf-loc2{display:flex;align-items:center;gap:10px;margin:12px 0 0;font-size:clamp(15px,2vw,19px);color:color-mix(in srgb,var(--blue) 60%,var(--fg))}
+.pf-loc2 svg{width:22px;height:22px;flex:none;color:var(--blue)}
+.pf-pills{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:10px}
+.pf-pills li{display:inline-flex;align-items:center;gap:9px;padding:9px 18px;border-radius:999px;font-size:14px;font-weight:600;border:1.5px solid currentColor;background:color-mix(in srgb,currentColor 9%,transparent)}
+.pf-pills li svg{width:20px;height:20px;flex:none}
+.pf-pills li span{color:inherit}
+.pf-pills .pl-pro{color:#ffb454}.pf-pills .pl-learner{color:var(--blue)}.pf-pills .pl-free{color:#2fd37a}.pf-pills .pl-guest{color:var(--dim)}
+.pf-pills .pf-since{color:var(--fg);border:1px solid color-mix(in srgb,var(--blue) 45%,var(--line));background:color-mix(in srgb,var(--blue) 8%,transparent)}
+.pf-pills .pf-since svg{color:var(--blue)}
+.pf-info{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);margin-top:26px;border:1px solid var(--line);border-radius:18px;background:color-mix(in srgb,var(--blue) 4%,var(--card))}
+.pf-info>div{display:flex;align-items:center;gap:14px;padding:16px 20px;min-width:0}
+.pf-info>div+div{border-left:1px solid var(--line)}
+.pf-ic{flex:none;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:color-mix(in srgb,var(--blue) 18%,var(--card));color:var(--blue)}
+.pf-ic svg{width:22px;height:22px}
+.pf-it{min-width:0;font-size:17px;font-weight:500;overflow-wrap:anywhere}
+.pf-it.pf-none{color:var(--dim)}
+.pf-act{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-top:16px;width:auto}
+.pf-act>button{display:flex;align-items:center;justify-content:center;gap:14px;height:62px;margin:0;padding:0 18px;border-radius:18px;font:700 18px/1 inherit;font-family:inherit;cursor:pointer;color:var(--fg);transition:transform .15s,filter .15s,border-color .2s}
+.pf-act>button:hover{filter:brightness(1.08)}.pf-act>button:active{transform:translateY(1px)}
+.pf-act>button svg{width:24px;height:24px;flex:none}
+.pf-sep{width:1px;height:28px;background:currentColor;opacity:.3;flex:none}
+.pf-big{grid-column:1/-1;order:1;color:#fff!important;background:linear-gradient(180deg,#3b97ff,#1768d8);border:1px solid #5aa7ff;box-shadow:0 12px 28px -14px #2f8cffcc}
+.pf-alt{order:2;background:var(--card);border:1px solid var(--line)}
+.pf-act .inb-btn{order:2;position:relative;width:auto;background:var(--card);border:1px solid var(--line)}
+.pf-act .inb-btn:hover{border-color:var(--blue);color:var(--fg)}
+.pf-act .inb-ic{position:relative;display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:color-mix(in srgb,var(--blue) 18%,var(--card));color:var(--blue)}
+.pf-act .inb-ic svg{width:22px;height:22px}
+.pf-act .inb-n{top:-6px;right:-6px}
+.pf-out{order:3;color:#fff!important;background:linear-gradient(180deg,#f23a47,#c4141f);border:1px solid #ff5a64;box-shadow:0 12px 28px -14px #e5484dcc}
+.pf-act .inb-rd{order:4;grid-column:1/-1;height:54px;font-size:16px}
+.pf-cols{margin-top:34px}
+.pf-bd li{border-radius:16px}.pf-seg i{border-radius:3px}
+.pf-edit .pf-av{border-radius:50%;box-shadow:0 0 0 3px var(--blue)}.pf-edit .pf-av:before{display:none}
+@media(max-width:720px){
+ .pf-hd{flex-direction:column;text-align:center;gap:20px}
+ .pf-who{width:100%}.pf-sub,.pf-pills,.pf-loc2{justify-content:center}
+ .pf-info{grid-template-columns:1fr}
+ .pf-info>div+div{border-left:0;border-top:1px solid var(--line)}
+ .pf-act{gap:12px}
+ .pf-it{font-size:14.5px}.pf-info>div{padding:14px 16px}.pf-act .inb-ic{width:38px;height:38px}
+ .pf-act>button{height:58px;gap:10px;font-size:16px;padding:0 12px;border-radius:16px}
+}
+@media(max-width:380px){.pf-act{grid-template-columns:1fr}.pf-big,.pf-act .inb-rd{grid-column:auto}.pf-info>div{padding:14px}.pf-pills li{padding:8px 14px}}
+@media(prefers-reduced-motion:reduce){.pf-act>button{transition:none}}
+
+/* ===== Compact sizing (smaller type, buttons and badges) ===== */
+.pf{padding:2px 0 28px}
+.pf-hd{gap:clamp(16px,3vw,28px)}
+.pf-ring{width:clamp(88px,13vw,112px);padding:4px;border-width:2px}
+.pf-on{width:clamp(16px,2.4vw,20px);border-width:3px}
+.pf-who h2{font-size:clamp(22px,3.6vw,32px)}
+.pf-sub{margin-top:6px;gap:4px 12px}
+.pf-role,.pf-han{font-size:clamp(13px,1.7vw,16px)}
+.pf-loc2{margin-top:8px;gap:7px;font-size:clamp(12.5px,1.5vw,14px)}
+.pf-loc2 svg{width:16px;height:16px}
+.pf-pills{margin-top:10px;gap:8px}
+.pf-pills li{padding:5px 12px;gap:6px;font-size:12px}
+.pf-pills li svg{width:14px;height:14px}
+.pf-info{margin-top:18px;border-radius:14px}
+.pf-info>div{padding:10px 14px;gap:10px}
+.pf-ic{width:34px;height:34px;border-radius:10px}.pf-ic svg{width:17px;height:17px}
+.pf-it{font-size:13.5px}
+.pf-act{gap:10px;margin-top:12px}
+.pf-act>button{height:44px;gap:10px;padding:0 14px;border-radius:12px;font-size:14px}
+.pf-act>button svg{width:18px;height:18px}
+.pf-sep{height:20px}
+.pf-act .inb-ic{width:30px;height:30px;border-radius:9px}.pf-act .inb-ic svg{width:16px;height:16px}
+.pf-act .inb-n{min-width:16px;height:16px;font-size:10px;line-height:16px;top:-5px;right:-5px}
+.pf-act .inb-rd{height:40px;font-size:13px}
+.pf-cols{margin-top:22px}
+.pf h3{margin:0 0 10px;font-size:11.5px}
+.pf-num{font-size:clamp(52px,8vw,76px);margin:0 0 12px}
+.pf-seg{height:11px;gap:2px}
+.pf-lv{padding-right:22px!important}.pf-st{padding-left:22px!important}
+.pf-cols>section{padding-bottom:20px}
+.pf-lv p{font-size:12px;margin-top:8px}
+.pf-st dl>div{padding:10px 0}
+.pf-st dt{font-size:12.5px}
+.pf-st dd{font-size:20px}.pf-st dd em{font-size:12px}
+.pf-bd{margin-top:20px}
+.pf-bd ul{grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px}
+.pf-bd li{padding:14px 12px 12px;gap:4px;border-radius:12px}
+.pf-bi{font-size:22px;margin-bottom:2px}.pf-bi svg{width:24px;height:24px}
+.pf-bd b{font-size:13px}.pf-bd small{font-size:11.5px;line-height:1.4}
+.pf-bd em{top:10px;right:10px;font-size:10.5px}
+.pf-hint{font-size:13px;padding:10px 12px}
+/* edit form */
+.pf-edit h2{font-size:22px;margin:0 0 4px}
+.pf-ed{gap:20px;margin-top:10px}
+.pf-edit .pf-av{width:96px;height:96px}
+.pf-edit .pf-av svg{width:44px;height:44px}
+.pf-form{gap:10px;max-width:460px}.pf-form label{font-size:12.5px;gap:4px}
+.pf-form input,.pf-form textarea,.pf-form select{padding:8px 11px;font-size:13.5px;border-radius:8px}
+.pf-form small{font-size:11.5px}
+.pf-avb .btn,.pf-fa .btn{padding:7px 14px;font-size:13px;border-radius:10px}
+@media(max-width:720px){
+ .pf-hd{gap:12px}
+ .pf-ring{width:92px}
+ .pf-act>button{height:42px;font-size:13.5px;gap:8px;padding:0 10px;border-radius:12px}
+ .pf-it{font-size:13px}.pf-info>div{padding:10px 12px}
+ .pf-cols{grid-template-columns:1fr}
+ .pf-lv{padding-right:0!important}.pf-st{padding-left:0!important;padding-top:16px!important}
+ .pf-bd ul{grid-template-columns:1fr 1fr;gap:8px}
+}

@@ -44,7 +44,7 @@
    setTimeout(()=>{refresh(false);paint()},0);
    const n=count();
    const rb=user()&&rewards.length?`<button type="button" class="btn ghost inb-rd" onclick="inbRedeem()">Redeem coupon<em>${rewards.length}</em></button>`:'';
-   return h.replace('class="pf-act">','class="pf-act"><button type="button" class="inb-btn" onclick="inbOpen()" aria-label="'+(n?n+' new messages':'Messages')+'" title="Messages">'+ENV+'<span class="inb-n"'+(n?'':' hidden')+'>'+(n>9?'9+':n)+'</span></button>'+rb);
+   return h.replace('class="pf-act">','class="pf-act"><button type="button" class="inb-btn" onclick="inbOpen()" aria-label="'+(n?n+' new messages':'Messages')+'" title="Messages"><span class="inb-ic">'+ENV+'<span class="inb-n"'+(n?'':' hidden')+'>'+(n>9?'9+':n)+'</span></span><i class="pf-sep"></i><span>Inbox</span></button>'+rb);
   };
  }
 

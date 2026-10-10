@@ -57,6 +57,10 @@ Deno.serve(async (req) => {
   if (code && !couponCode) body.plan = code // subscription: Paystack renews it automatically
   const r = await paystack('/transaction/initialize', { method: 'POST', body: JSON.stringify(body) })
   const out = await r.json().catch(() => null)
-  if (!r.ok || !out?.status) return json({ error: 'payment provider error' }, 502)
+  if (!r.ok || !out?.status) {
+    console.error('paystack init failed', r.status, JSON.stringify(out))
+    const why = String(out?.message ?? (Deno.env.get('PAYSTACK_SECRET_KEY') ? `HTTP ${r.status}` : 'PAYSTACK_SECRET_KEY is not set'))
+    return json({ error: `payment provider error: ${why}` }, 502)
+  }
   return json({ authorization_url: out.data.authorization_url, reference })
 })

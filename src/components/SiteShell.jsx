@@ -30,8 +30,13 @@ export default function SiteShell() {
     else rootRef.current && rootRef.current.scrollTo({ top: 0, behavior: 'auto' })
   }, [loc.pathname, loc.key, loc.state, scrollNow])
 
-  const [note, setNote] = useState(false)
-  useEffect(() => { if (loc.state && loc.state.deleted) setNote(true) }, [loc.key, loc.state])
+   const [note, setNote] = useState(false)
+  useEffect(() => {
+    if (!(loc.state && loc.state.deleted)) return
+    setNote(true)
+    const t = setTimeout(() => setNote(false), 8000) // hide after 8 seconds
+    return () => clearTimeout(t)
+  }, [loc.key, loc.state])
   useReveal(rootRef, loc.key)
   const value = useMemo(() => ({ rootRef, scrollToId, light, bp, setBp }), [scrollToId, light, bp])
   return (

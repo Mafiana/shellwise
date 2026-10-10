@@ -151,7 +151,7 @@ function Stat({ label, value, sub, tone }) {
 const GENDER = { male: 'Male', female: 'Female', other: 'Other', prefer_not: 'Prefer not to say' }
 const USER_COLS = 'id,username,full_name,email,plan,created_at,last_seen,suspended,is_admin,avatar,location,bio,gender,progress'
 
-function UserDrawer({ id, me, onClose, onChanged }) {
+function UserDrawer({ id, me, onClose, onChanged, onDeleted }) {
   const confirm = useConfirm()
   const [u, setU] = useState(null)
   const [pays, setPays] = useState([])
@@ -180,8 +180,7 @@ function UserDrawer({ id, me, onClose, onChanged }) {
     setBusy(false)
     if (error || data?.error) return setErr(await fnMsg(error, data, 'That action failed.'))
     onChanged()
-    if (body.action === 'delete_user') onClose(); else load()
-  }
+    if (body.action === 'delete_user') { onClose(); if (onDeleted) onDeleted() } else load()  }
   const pr = u?.progress || {}, st = pr.kstate || {}
   const modules = Array.isArray(pr.kdone) ? pr.kdone.filter(Boolean).length : 0
   const hasProg = !!(pr.kstate || pr.kdone)
@@ -499,6 +498,7 @@ function PwModal({ u, onClose }) {
 
 function Users({ me }) {
   const confirm = useConfirm()
+    const [ok, setOk] = useState('')
   const [rows, setRows] = useState(null)
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState('all')
@@ -537,9 +537,17 @@ function Users({ me }) {
           {[['all', 'All'], ['online', 'Online'], ['free', 'Free'], ['learner', 'Learner'], ['pro', 'Pro'], ['suspended', 'Suspended']].map(([v, t]) => <button key={v} className={filter === v ? 'on' : ''} onClick={() => setFilter(v)}>{t}</button>)}
         </div>
       </div>
-      {sel && <UserDrawer id={sel} me={me} onClose={() => setSel(null)} onChanged={load} />}
-      {pwFor && <PwModal u={pwFor} onClose={() => setPwFor(null)} />}
-      {err && <p className="pnl-err">{err}</p>}
+      {sel && <UserDrawer id={sel} me={me} onClose={() => setSel(null)} onChanged={load} onDeleted={() => {
+  setOk('Selected account and its data were deleted.')
+  setTimeout(() => setOk(''), 8000)
+}} />}
+{pwFor && <PwModal u={pwFor} onClose={() => setPwFor(null)} />}
+{ok && (
+  <div className="pnl-note" role="status">
+    <span>{ok}</span>
+    <button type="button" onClick={() => setOk('')} aria-label="Dismiss">✕</button>
+  </div>
+)}{err && <p className="pnl-err">{err}</p>}
       {!rows ? <p className="pnl-dim">Loading users...</p> : !rows.length ? <p className="pnl-dim">No users match.</p> : (
         <div className="pnl-tw"><table className="pnl-tbl">
           <thead><tr><th>User</th><th>Email</th><th>Plan</th><th>Joined</th><th>Last seen</th><th className="r">Actions</th></tr></thead>
@@ -666,8 +674,7 @@ function Payments() {
         </div>
       </div>
       <p className="pnl-dim pnl-sum">{shown.length} {shown.length === 1 ? 'payment' : 'payments'} · {ngn(total)} received
-        {rows.some((p) => p.status === 'pending') && <button type="button" className="pnl-btn pnl-rc" onClick={() => recheck(null)} disabled={!!chk}>{chk === 'all' ? 'Checking...' : 'Recheck pending with Paystack'}</button>}
-      </p>
+{rows.some((p) => p.status === 'pending') && <button type="button" className="pnl-btn pnl-rc warn" onClick={() => recheck(null)} disabled={!!chk}>{chk === 'all' ? 'Checking...' : 'Recheck pending with Paystack'}</button>}      </p>
       {note && <p className="pnl-ok" role="status">{note}</p>}
       {!shown.length ? <p className="pnl-dim">{rows.length ? 'No payments match these filters.' : 'No payments yet.'}</p> : (
         <div className="pnl-tw"><table className="pnl-tbl">
@@ -675,8 +682,10 @@ function Payments() {
           <tbody>
             {pg.rows.map((p) => (
               <tr key={p.reference}>
-                <td><b>{p.who?.username || 'unknown'}</b><small>{p.who?.email}</small></td>
-                <td><span className="pnl-ref"><code title={p.reference}>{p.reference.slice(0, 11)}...</code><button type="button" className="pnl-cp" onClick={() => copyRef(p.reference)} aria-label={`Copy reference ${p.reference}`}>{copied === p.reference ? 'Copied' : 'Copy'}</button></span></td>
+<td>
+  <b>{p.who?.username || (p.user_id ? 'unknown' : 'deleted user')}</b>
+  <small>{p.who?.email || (p.user_id ? '' : 'account removed')}</small>
+</td>                <td><span className="pnl-ref"><code title={p.reference}>{p.reference.slice(0, 11)}...</code><button type="button" className="pnl-cp" onClick={() => copyRef(p.reference)} aria-label={`Copy reference ${p.reference}`}>{copied === p.reference ? 'Copied' : 'Copy'}</button></span></td>
                 <td className="cap">{p.plan} · {p.interval}</td>
                 <td className="r"><b>{ngn(p.amount_kobo)}</b>{p.coupon && <small>code {p.coupon}</small>}</td>
                 <td>{chName(p.channel)}</td>
@@ -747,14 +756,16 @@ function Bell({ onGo }) {
   const known = useRef(null)
   const live = useRef({})
   live.current = { sound, onGo }
-  const load = useCallback(async () => {
-    const [p, m] = await Promise.all([
+    const load = useCallback(async () => {
+    const [p, m, u] = await Promise.all([
       supabase.from('payments').select('reference,plan,amount_kobo,status,created_at,paid_at').in('status', ['success', 'failed']).order('created_at', { ascending: false }).limit(15),
       supabase.from('contact_messages').select('id,name,topic,created_at').order('created_at', { ascending: false }).limit(15),
+      supabase.from('profiles').select('id,username,full_name,email,created_at').order('created_at', { ascending: false }).limit(15),
     ])
     const list = [
       ...(p.data || []).map((x) => ({ k: 'p' + x.reference, tab: 'payments', ok: x.status === 'success', t: x.paid_at || x.created_at, text: (x.status === 'success' ? 'Payment received' : 'Payment failed') + ' · ' + ngn(x.amount_kobo) + ' · ' + (x.plan || '') })),
       ...(m.data || []).map((x) => ({ k: 'm' + x.id, tab: 'messages', ok: true, t: x.created_at, text: 'New message from ' + x.name + ' · ' + (TOPIC[x.topic] || x.topic) })),
+      ...(u.data || []).map((x) => ({ k: 'u' + x.id, tab: 'users', ok: true, t: x.created_at, text: 'New user · @' + (x.username || 'unknown') + (x.full_name ? ' · ' + x.full_name : '') })),
     ].sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 20)
     const fresh = known.current ? list.filter((i) => !known.current.has(i.k)) : []
     known.current = new Set(list.map((i) => i.k))
@@ -773,9 +784,10 @@ function Bell({ onGo }) {
   useEffect(() => {
     load()
     const t = setInterval(load, 30000) // backup in case the live connection drops
-    const ch = supabase.channel('admin-alerts')
+        const ch = supabase.channel('admin-alerts')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, load)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contact_messages' }, load)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, load)
       .subscribe()
     return () => { clearInterval(t); supabase.removeChannel(ch) }
   }, [load])
@@ -820,8 +832,7 @@ function Bell({ onGo }) {
               <span className={'pnl-ic ' + (i.ok ? i.tab : 'bad')}>{ICON[i.tab]}</span>
               <span className="pnl-ittx"><b>{i.text}</b><small>{ago(i.t)}</small></span>
             </button>
-          )) : <p className="pnl-dim pnl-popempty">Nothing yet. New payments and messages will show up here.</p>}
-        </div>
+)) : <p className="pnl-dim pnl-popempty">Nothing yet. New users, payments and messages will show up here.</p>}        </div>
       )}
     </div>
   )

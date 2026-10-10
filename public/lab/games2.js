@@ -85,17 +85,26 @@ const SC=[
 // share the bank with the module quizzes (3-option format: question, answer, two wrong)
 SC.forEach(s=>{const w=s[3].split('|');if(Q[s[0]])Q[s[0]].push([s[1],s[2],w[0],w[1]])});
 
-const mcq=(id,title,bank,n,goal,qf,ctx)=>{
- const set=shuf(bank).slice(0,n);let i=0,sc=0;
+const mcq=(id,title,bank,n,goal,qf,ctx,secs)=>{
+ const set=shuf(bank).slice(0,n);let i=0,sc=0;const log=[];let done=false,left=secs||0,tm=null;
+ const end=(late)=>{if(done)return;done=true;if(tm)clearInterval(tm);
+  if(late)for(let k=i;k<set.length;k++){const q=qf(set[k]);log.push({q:q.q,a:q.a,y:'(no answer)',ok:false,why:q.why})}
+const ok=sc>=goal;finish(id,ok,sc,sc==set.length?10:ok?5:0);shell(id,title,`<div class="fb ${ok?'ok':'bad'}">${late?'⏱ Time is up! ':''}${sc} of ${set.length} correct. ${ok?'Great work!':'Goal is '+goal+'. Review the answers and try again.'}</div><button class=btn id=rvb>📖 Review my answers</button><div id=rvl></div>`+again(id));mark(id);stat(`${sc}/${set.length}`);
+   const rb=document.getElementById('rvb');if(rb)rb.onclick=()=>{const l=document.getElementById('rvl');if(l.innerHTML){l.innerHTML='';rb.textContent='📖 Review my answers';return}rb.textContent='Hide review';
+    l.innerHTML=log.map((r,k)=>`<div class="fb ${r.ok?'ok':'bad'}" style="margin-top:10px;text-align:left"><b>${k+1}. ${r.q}</b><br>${r.ok?'✔ You answered: ':'✘ You answered: '}<b>${esc(r.y)}</b>${r.ok?'':`<br>✔ Correct answer: <b>${esc(r.a)}</b>`}<br><span class=dim>${esc(r.why)}</span></div>`).join('')};
+  };
+ const paintT=()=>{const e=document.getElementById('mt');if(e)e.textContent='⏱ '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0')+' left'};
  const show=()=>{
-  if(i>=set.length){const ok=sc>=goal;finish(id,ok,sc,sc==set.length?10:ok?5:0);shell(id,title,`<div class="fb ${ok?'ok':'bad'}">${sc} of ${set.length} correct. ${ok?'Great work!':'Goal is '+goal+'. Review the answers and try again.'}</div>`+again(id));mark(id);stat(`${sc}/${set.length}`);return}
+  if(i>=set.length){end(false);return}
   const q=qf(set[i]);const opts=shuf([q.a,...q.w]);
-  shell(id,title,`<p class=dim>${ctx}</p><div class=sq>${q.q}</div><div class=opts2>${opts.map(o=>`<button class=opt data-o="${encodeURIComponent(o)}">${esc(o)}</button>`).join('')}</div><div id=mf></div>`);mark(id);stat(`Question ${i+1} of ${set.length} · ${sc} correct`);
+  shell(id,title,`<p class=dim>${ctx}</p><div class=sq>${q.q}</div><div class=opts2>${opts.map(o=>`<button class=opt data-o="${encodeURIComponent(o)}">${esc(o)}</button>`).join('')}</div><div id=mf></div>${secs?'<div id=mt class=dim style="font-weight:700;margin-top:10px"></div>':''}`);mark(id);paintT();stat(`Question ${i+1} of ${set.length} · ${sc} correct`);
   document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const v=decodeURIComponent(b.dataset.o),ok=v==q.a;document.querySelectorAll('.opt').forEach(x=>{x.disabled=true;if(decodeURIComponent(x.dataset.o)==q.a)x.classList.add('right');else if(x==b)x.classList.add('wrong')});
+   log.push({q:q.q,a:q.a,y:v,ok,why:q.why});
    if(ok){sc++;beep(1100,.08)}else beep(200,.2);
    document.getElementById('mf').innerHTML=`<div class="fb ${ok?'ok':'bad'}">${ok?'✔ Correct':'✘ Not quite'}. ${esc(q.why)}</div><button class=btn id=nx>${i+1>=set.length?'Results':'Next ›'}</button>`;
    const nx=document.getElementById('nx');nx.onclick=()=>{i++;show()};nx.focus()});
  };
+ if(secs)tm=setInterval(()=>{if(done||!alive(id)){clearInterval(tm);return}left--;paintT();if(left<=0)end(true)},1000);
  show()};
 
 // 1. Which Command?
@@ -148,7 +157,7 @@ const PR=[
 ['test -f nothing.txt && echo yes','Nothing is printed',['yes','no','error'],'test fails, so && does not run echo.'],
 ['for i in 1 2 3; do echo $i; done | wc -l','3',['1','6','123'],'Three iterations print three lines.'],
 ['echo one two | cut -d" " -f2','two',['one','one two','2'],'cut -f2 keeps the second field.']];
-GAMES.predict=()=>mcq('predict','Predict the Output',PR,8,6,p=>({q:`What does this print?<br><code>${esc(p[0])}</code>`,a:p[1],w:p[2],why:p[3]}),'Read the command and work out the result before you pick.');
+GAMES.predict=()=>mcq('predict','Predict the Output',PR,8,6,p=>({q:`What does this print?<br><code>${esc(p[0])}</code>`,a:p[1],w:p[2],why:p[3]}),'Read the command and work out the result before you pick.',60);
 
 // 5. Permission Maths (typed, timed)
 const R3=['---','--x','-w-','-wx','r--','r-x','rw-','rwx'];
@@ -168,15 +177,18 @@ const PL=[
 ['Sort a file and remove the repeats',['sort ~/notes.txt','|','uniq']],
 ['Count failed logins in auth.log',['grep Failed /var/log/auth.log','|','wc -l']]];
 GAMES.pipeline=()=>{
- const set=shuf(PL).slice(0,5);let i=0,mis=0,pos=0,built=[];const MAXM=2;
- const done_=won=>{const sc=won?Math.max(10,50-mis*10):0;finish('pipeline',won,sc,won?(mis==0?10:5):0);shell('pipeline','Pipeline Builder',`<div class="fb ${won?'ok':'bad'}" style="font-size:1.1em"><b>${won?'🏆 YOU WIN!':'💥 YOU LOSE'}</b><br>${won?'Nicely built! '+(mis==0?'Flawless.':mis+' wrong '+(mis==1?'pick':'picks')+' - you stayed under the limit.'):'You made '+mis+' wrong picks. The limit is '+MAXM+'. Try again.'}</div>`+again('pipeline'));mark('pipeline');stat(won?'Won · score '+sc:'Lost');};
+ const set=shuf(PL).slice(0,5);let i=0,mis=0,pos=0,built=[];const MAXM=2;let fin=false,left=60,tm=null;
+ const paintT=()=>{const e=document.getElementById('pt');if(e)e.textContent='⏱ '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0')+' left'};
+ const done_=(won,late)=>{if(fin)return;fin=true;if(tm)clearInterval(tm);const sc=won?Math.max(10,50-mis*10):0;finish('pipeline',won,sc,won?(mis==0?10:5):0);shell('pipeline','Pipeline Builder',`<div class="fb ${won?'ok':'bad'}" style="font-size:1.1em"><b>${won?'🏆 YOU WIN!':'💥 YOU LOSE'}</b><br>${won?'Nicely built! '+(mis==0?'Flawless.':mis+' wrong '+(mis==1?'pick':'picks')+' - you stayed under the limit.'):(late?'⏱ Time is up! You built '+i+' of '+set.length+' pipelines.':'You made '+mis+' wrong picks. The limit is '+MAXM+'. Try again.')}</div>`+again('pipeline'));mark('pipeline');stat(won?'Won · score '+sc:'Lost');};
  const show=()=>{
+  if(fin)return;
   if(i>=set.length)return done_(true);
   const p=set[i];pos=0;built=[];
-  shell('pipeline','Pipeline Builder',`<p class=dim>Click the pieces in the right order to build the command.</p><div class=sq>${esc(p[0])}</div><div id=pb class=pb></div><div class=pcs>${shuf(p[1].map((t,k)=>[t,k])).map(([t,k])=>`<button class=opt data-k="${k}">${esc(t)}</button>`).join('')}</div><div id=pf></div>`);mark('pipeline');stat(`Puzzle ${i+1} of ${set.length} · mistakes ${mis}/${MAXM}`);
+  shell('pipeline','Pipeline Builder',`<p class=dim>Click the pieces in the right order to build the command.</p><div class=sq>${esc(p[0])}</div><div id=pb class=pb></div><div class=pcs>${shuf(p[1].map((t,k)=>[t,k])).map(([t,k])=>`<button class=opt data-k="${k}">${esc(t)}</button>`).join('')}</div><div id=pf></div><div id=pt class=dim style="font-weight:700;margin-top:10px"></div>`);mark('pipeline');paintT();stat(`Puzzle ${i+1} of ${set.length} · mistakes ${mis}/${MAXM}`);
   document.querySelectorAll('.pcs .opt').forEach(b=>b.onclick=()=>{const t=p[1][pos];if(p[1][+b.dataset.k]==t&&!b.disabled){built.push(t);pos++;b.disabled=true;b.classList.add('right');beep(900,.05);document.getElementById('pb').textContent=built.join(' ');
     if(pos>=p[1].length){document.getElementById('pf').innerHTML=`<div class="fb ok">✔ <code>${esc(built.join(' '))}</code></div><button class=btn id=nx>${i+1>=set.length?'Results':'Next ›'}</button>`;const nx=document.getElementById('nx');nx.onclick=()=>{i++;show()};nx.focus()}}
    else{mis++;beep(200,.15);if(mis>MAXM)return done_(false);b.classList.add('wrong');setTimeout(()=>b.classList.remove('wrong'),400);stat(`Puzzle ${i+1} of ${set.length} · mistakes ${mis}/${MAXM}`)}})};
+ tm=setInterval(()=>{if(fin||!alive('pipeline')){clearInterval(tm);return}left--;paintT();if(left<=0)done_(false,true)},1000);
  show()};
 
 window.GH.mcq=mcq;window.GH.SC=SC;

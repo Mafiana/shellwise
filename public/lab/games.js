@@ -48,10 +48,8 @@ GAMES.memory=()=>{
  let first=null,lock=false,moves=0,found=0,t0=Date.now();
  shell('memory','Command Match',`<p class=dim>Match each command with its meaning.</p><div class=mem>${cards.map((c,i)=>`<button class="mcard" data-i="${i}" aria-label="Card ${i+1}"><span class=mf>?</span><span class=mb>${esc(c.t)}</span></button>`).join('')}</div>`);mark('memory');
  stat('Moves: 0');
- const tick=setInterval(()=>{if(!alive('memory'))return clearInterval(tick);stat(`Moves: ${moves} · ⏱ ${Math.floor((Date.now()-t0)/1000)}s`)},500);
- document.querySelectorAll('.mcard').forEach(b=>b.onclick=()=>{
-  if(lock||b.classList.contains('up')||b.classList.contains('ok'))return;
-  b.classList.add('up');beep(660,.04);
+ let over=false;const tick=setInterval(()=>{if(!alive('memory'))return clearInterval(tick);const l=Math.max(0,60-Math.floor((Date.now()-t0)/1000));stat(`Moves: ${moves} · ⏱ ${l}s left`);if(l<=0&&!over){over=true;lock=true;clearInterval(tick);finish('memory',false,found*50,0);document.getElementById('gm').insertAdjacentHTML('beforeend',`<div class="fb bad">⏱ Time is up! You matched ${found} of 8 pairs.</div>`+again('memory'))}},500); document.querySelectorAll('.mcard').forEach(b=>b.onclick=()=>{
+  if(over||lock||b.classList.contains('up')||b.classList.contains('ok'))return;  b.classList.add('up');beep(660,.04);
   if(!first){first=b;return}
   moves++;const a=cards[+first.dataset.i],c=cards[+b.dataset.i];
   if(a.k==c.k&&a.c!=c.c){first.classList.add('ok');b.classList.add('ok');beep(1100,.08);first=null;if(++found==8){clearInterval(tick);const s=Math.floor((Date.now()-t0)/1000),st=moves<=12?3:moves<=18?2:1;finish('memory',true,Math.max(0,1000-moves*20-s*5),st*3);
@@ -83,22 +81,34 @@ GAMES.cipher=()=>{
 // ---------- Hack-le ----------
 const HW=['admin','shell','proxy','token','virus','patch','crack','audit','cloud','cache','brute','spoof','login','query','vault','debug','linux','nodes','roots','trace','ports','salts','block','scans','forge'];
 GAMES.hackle=()=>{
- const w=pick(HW);let row=0,cur='',over=false;const grid=[...Array(6)].map(()=>Array(5).fill(''));const ks={};
+ // 6 lines = 6 different words. Each line shows its own hint letters; you get one guess per line, then the hint changes for the next line.
+ const ws=[...HW].sort(()=>Math.random()-.5).slice(0,6);
+ const hints=ws.map(()=>[0,1,2,3,4].sort(()=>Math.random()-.5).slice(0,3));
+ let row=0,cur='',over=false,solved=0;const grid=[...Array(6)].map(()=>Array(5).fill(''));let ks={};
  const KB=['qwertyuiop','asdfghjkl','⏎zxcvbnm⌫'];
- const draw=()=>{document.getElementById('hk').innerHTML=grid.map((g,r)=>`<div class=hr>${g.map((c,i)=>`<span class="hc ${c.s||''}">${c.l||''}</span>`).join('')}</div>`).join('');
+ const draw=()=>{const r0=Math.min(row,5),w=ws[r0],hn=hints[r0];
+  document.getElementById('hkh').innerHTML=over?'':`<div class=dim style="margin-bottom:4px">Line ${r0+1} hint:</div><div class=hr>`+[...w].map((c,i)=>`<span class="hc ${hn.includes(i)?'hit':''}">${hn.includes(i)?c.toUpperCase():''}</span>`).join('')+`</div>`;
+  document.getElementById('hk').innerHTML=grid.map((g,r)=>`<div class=hr>${g.map((c,i)=>`<span class="hc ${c.s||''}">${c.l||''}</span>`).join('')}</div>`).join('');
   document.getElementById('hkb').innerHTML=KB.map(l=>`<div class=kr>${[...l].map(k=>`<button class="key ${ks[k]||''}" onclick="HK('${k}')">${k}</button>`).join('')}</div>`).join('')};
- shell('hackle','Hack-le',`<p class=dim>Guess the 5-letter security word. Green = right spot, yellow = wrong spot, grey = not in word.</p><div id=hk class=hk></div><div id=hkb class=hkb></div><div id=hkf></div>`);mark('hackle');
+ shell('hackle','Hack-le',`<p class=dim>Six lines, six different security words. Each line shows its own hint letters (green boxes). You get one guess per line, then the hint changes for the next word. Green = right spot, yellow = wrong spot, grey = not in word.</p><div id=hkt class=dim style="font-weight:700;margin-bottom:8px"></div><div id=hkf></div><div id=hkh style="margin-bottom:12px"></div><div id=hk class=hk></div><div id=hkb class=hkb></div>`);mark('hackle');
  for(let r=0;r<6;r++)for(let c=0;c<5;c++)grid[r][c]={l:'',s:''};
+ const endGame=(late)=>{if(over)return;over=true;const win=solved>=3;finish('hackle',win,solved,win?3:0);
+  document.getElementById('hkf').innerHTML=`<div class="fb ${win?'ok':'bad'}">${late?'⏱ Time is up! ':''}You solved ${solved} of 6.<br>The words are: ${ws.map(x=>`<b>${x.toUpperCase()}</b>`).join(', ')}.</div>`+again('hackle');
+  draw();const f=document.getElementById('hkf');if(f&&f.scrollIntoView)f.scrollIntoView({block:'nearest'})};
  const submit=()=>{
-  if(cur.length<5)return;const res=Array(5).fill('absent'),rem=[...w];
+  if(cur.length<5)return;const w=ws[row],res=Array(5).fill('absent'),rem=[...w];
   for(let i=0;i<5;i++)if(cur[i]==w[i]){res[i]='hit';rem[i]=null}
   for(let i=0;i<5;i++)if(res[i]!='hit'){const j=rem.indexOf(cur[i]);if(j>=0){res[i]='near';rem[j]=null}}
-  for(let i=0;i<5;i++){grid[row][i]={l:cur[i].toUpperCase(),s:res[i]};const k=cur[i],rank={absent:1,near:2,hit:3};if(!ks[k]||rank[res[i]]>rank[ks[k]])ks[k]=res[i]}
-  const won=cur==w;row++;cur='';draw();stat(`Try ${Math.min(row+1,6)} of 6`);
-  if(won||row>=6){over=true;finish('hackle',won,won?7-row:0,won?3:0);document.getElementById('hkf').innerHTML=`<div class="fb ${won?'ok':'bad'}">${won?`🎉 Solved in ${row} ${row==1?'try':'tries'}!`:`The word was <b>${w.toUpperCase()}</b>.`}</div>`+again('hackle')}};
- window.HK=k=>{if(over)return;if(k=='⏎')submit();else if(k=='⌫'){cur=cur.slice(0,-1)}else if(cur.length<5&&/^[a-z]$/.test(k))cur+=k;grid[row].forEach((c,i)=>{grid[row][i]={l:(cur[i]||'').toUpperCase(),s:''}});draw()};
+  for(let i=0;i<5;i++)grid[row][i]={l:cur[i].toUpperCase(),s:res[i]};
+  if(cur==w)solved++;
+  row++;cur='';ks={};
+  if(row>=6){endGame(false);return}
+  draw();stat(`Line ${row+1} of 6`)};
+ window.HK=k=>{if(over)return;if(k=='⏎')submit();else if(k=='⌫'){cur=cur.slice(0,-1)}else if(cur.length<5&&/^[a-z]$/.test(k))cur+=k;if(row<6)grid[row].forEach((c,i)=>{grid[row][i]={l:(cur[i]||'').toUpperCase(),s:''}});draw()};
  const onkey=e=>{if(!alive('hackle'))return document.removeEventListener('keydown',onkey);if(e.ctrlKey||e.metaKey||e.altKey)return;if(e.key=='Enter'||e.key=='Backspace'||/^[a-zA-Z]$/.test(e.key)){e.preventDefault();if(document.activeElement&&document.activeElement.blur)document.activeElement.blur()}if(e.key=='Enter')HK('⏎');else if(e.key=='Backspace')HK('⌫');else if(/^[a-zA-Z]$/.test(e.key))HK(e.key.toLowerCase())};
- document.addEventListener('keydown',onkey);draw();stat('Try 1 of 6')};
+ document.addEventListener('keydown',onkey);draw();stat('Line 1 of 6');
+ let left=60;const tt=document.getElementById('hkt');const paint=()=>{tt.textContent='⏱ '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0')+' left'};paint();
+ const tm=setInterval(()=>{if(over||!alive('hackle')){clearInterval(tm);return}left--;paint();if(left<=0){clearInterval(tm);endGame(true)}},1000)};
 
 // ---------- Phishing Spotter ----------
 const MAILS=[

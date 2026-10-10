@@ -105,7 +105,7 @@
  // =====================================================================
  // TIMED EXAM MODE
  // =====================================================================
- const EXAMS=[{id:'q',name:'Quick check',n:15,min:12},{id:'s',name:'Standard',n:30,min:25},{id:'f',name:'Full exam',n:50,min:40}];
+ const EXAMS=[{id:'q',name:'Quick check',n:30,min:12},{id:'s',name:'Standard',n:50,min:25},{id:'f',name:'Full exam',n:100,min:40}];
  const PASS=70;
  const ex=()=>{const o=rd('kexam',{});return{hist:Array.isArray(o.hist)?o.hist.slice(-20):[],passed:o.passed&&typeof o.passed=='object'?o.passed:{}}};
  let EX=null,exT=0;
@@ -117,7 +117,7 @@
   const H=ex(),P=pool().length;
   return `<h2>Timed exam mode</h2><p class=dim>No feedback until you submit. Pass mark ${PASS}%. Answers can be changed and questions flagged until time runs out. The exam submits itself when the timer ends.</p>
    <div class="pgrid">${EXAMS.map(e=>`<article class="mc"><div class=mc-top><span class=mc-ic>⏱️</span><span class=mc-n>${e.min} min</span></div><h3>${e.name}</h3><p class=mc-d>${e.n} mixed questions from the content your plan opens.${H.passed[e.id]?' ✔ Passed before.':''}</p><div class=mc-ft><span class=dim>${P>=e.n?e.n+' questions':'Needs '+e.n+' questions'}</span><button class=btn ${P>=e.n?'':'disabled'} onclick="exStart('${e.id}')">Start</button></div></article>`).join('')}</div>
-   ${H.hist.length?`<h3 style="margin-top:26px">Recent attempts</h3><div class="xt-hist">${H.hist.slice().reverse().slice(0,6).map(h=>`<div><b>${h.pct}%</b> <span class="${h.pass?'xt-p':'xt-f'}">${h.pass?'Passed':'Not passed'}</span> <span class=dim>${esc(h.name)} · ${h.score}/${h.of} · ${fmt(h.secs)} · ${esc(h.date)}</span></div>`).join('')}</div>`:''}`};
+   ${H.hist.length?`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:26px"><h3 style="margin:0">Recent attempts</h3><button class="btn xt-quit" onclick="exClear()">🗑 Clear history</button></div><div class="xt-hist">${H.hist.slice().reverse().slice(0,6).map(h=>`<div><b>${h.pct}%</b> <span class="${h.pass?'xt-p':'xt-f'}">${h.pass?'Passed':'Not passed'}</span> <span class=dim>${esc(h.name)} · ${h.score}/${h.of} · ${fmt(h.secs)} · ${esc(h.date)}</span></div>`).join('')}</div>`:''}`};
  window.exStart=function(id){if(!gate('exam'))return;const e=EXAMS.find(x=>x.id==id);if(!e)return;
   const qs=shuf(pool()).slice(0,e.n);if(qs.length<e.n)return;
   EX={e,qs:qs.map(q=>({q:q[0],a:q[1],opts:shuf(q.slice(1)),pick:-1,flag:false})),i:0,end:Date.now()+e.min*60000,t0:Date.now(),over:false};
@@ -132,7 +132,7 @@
    <div class="xt-nav" role=group aria-label="Questions">${z.qs.map((x,k)=>`<button class="${k==z.i?'cur':''}${x.pick>=0?' ans':''}${x.flag?' flg':''}" onclick="exGo(${k})" aria-label="Question ${k+1}${x.flag?' flagged':''}">${k+1}</button>`).join('')}</div>
    <div class=dim>Question ${z.i+1} of ${z.qs.length}</div><h3 class=qz-q>${esc(c.q)}</h3>
    <div>${c.opts.map((o,k)=>`<button class="opt${c.pick==k?' sel':''}" onclick="exPick(${k})"><span class=kb>${k+1}</span>${esc(o)}</button>`).join('')}</div>
-   <div class=md-act><button class="btn ghost" onclick="exGo(${z.i-1})" ${z.i?'':'disabled'}>‹ Previous</button><button class="btn ghost" onclick="exFlag()">${c.flag?'⚑ Unflag':'⚐ Flag'}</button><button class="btn ghost" onclick="exGo(${z.i+1})" ${z.i<z.qs.length-1?'':'disabled'}>Next ›</button><button class="btn" onclick="exSubmit()">Submit exam</button></div></div>`}
+   <div class=md-act><button class="btn ghost" onclick="exGo(${z.i-1})" ${z.i?'':'disabled'}>‹ Previous</button><button class="btn ghost" onclick="exFlag()">${c.flag?'⚑ Unflag':'⚐ Flag'}</button><button class="btn ghost" onclick="exGo(${z.i+1})" ${z.i<z.qs.length-1?'':'disabled'}>Next ›</button><button class="btn" onclick="exSubmit()">Submit exam</button><button class="btn xt-quit" onclick="exQuit()">✕ Quit exam</button></div></div>`}
  const repaint=()=>{const v=pv();if(v&&document.querySelector('#side button[data-v=exam].on'))v.innerHTML=R.exam()};
  window.exGo=function(k){if(!EX||EX.over||k<0||k>=EX.qs.length)return;EX.i=k;repaint();pv().scrollTop=0};
  window.exPick=function(k){if(!EX||EX.over)return;EX.qs[EX.i].pick=k;repaint()};
@@ -156,6 +156,8 @@
    <div class=md-act><button class=btn onclick="exAgain()">New exam</button></div></div>`}
   window.exSetLeft=function(ms){if(EX&&!EX.over)EX.end=Date.now()+ms};
  window.exAgain=function(){EX=null;go('exam')};
+ window.exClear=function(){swConfirm('Clear your exam history?','This removes your list of recent attempts. Exams you have already passed stay marked as passed.','Clear history',true).then(y=>{if(!y)return;const H=ex();wr('kexam',{hist:[],passed:H.passed});if(document.querySelector('#side button[data-v=exam].on')&&!(EX&&!EX.over))pv().innerHTML=R.exam()})};
+ window.exQuit=function(){if(!EX||EX.over)return;swConfirm('Quit the exam?','Your answers will be lost and this attempt will not be saved.','Quit exam',true).then(y=>{if(y&&EX&&!EX.over){clearInterval(exT);EX=null;go('exam')}})};
 
  // =====================================================================
  // CERTIFICATE OF COMPLETION

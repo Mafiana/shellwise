@@ -552,6 +552,7 @@ html.lp-on #load{display:none!important}
 #lp.lt .au-g:hover{background:#f1f5fc;border-color:#16203a40}
 
 
+
 @media (max-width:860px){.certs{padding:56px 0 48px}.shelf{gap:30px 14px}}
 
 /* ===== v7: sign-up username hint ===== */
@@ -578,3 +579,37 @@ html.lp-on body>*:not(#lp):not(#lpl):not(script){visibility:hidden!important}
 .au-plans button.on{border-color:var(--pc);background:color-mix(in srgb,var(--pc) 16%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--pc) 22%,transparent)}
 @media (max-width:480px){.au-plans>div{grid-template-columns:1fr}.au-plans button{grid-template-columns:1fr auto;align-items:center}}
 #lp.lt .au-plans button{border-color:#16203a2e;background:#16203a08}
+
+
+
+/* Compact create-account / log-in card */
+.au{padding:36px 0 60px}
+.au-side{padding:30px 32px}
+.au-card{padding:26px 32px}
+.au-side h2{font-size:30px;margin-bottom:8px}
+.au-side ul{gap:9px;margin-bottom:22px}
+.au-side li{font-size:14px}
+.au-back{margin-bottom:18px}
+.au-badge{margin-bottom:16px}
+.au-tabs{margin-bottom:16px}
+.au-tabs button{padding:9px;font-size:14px}
+#auform{gap:10px}
+#auform label span{margin-bottom:4px;font-size:13px}
+#auform input{padding:10px 14px;font-size:14.5px;border-radius:10px}
+.pw input{padding-right:46px}
+.pw button{width:32px;height:32px}
+.pw button svg{width:18px;height:18px}
+.hint{font-size:11.5px}
+.meter{margin-top:-4px}
+.meter i{height:4px}
+.au-plans{margin:0 0 6px}
+.au-plans>span{font-size:13px;margin-bottom:5px}
+.au-plans button{padding:8px 10px}
+.au-plans button b{font-size:14px}
+.au-plans button small{font-size:11px}
+.au-err{min-height:0;font-size:13px}
+.au-agree{font-size:12.5px}
+.au-g{padding:10px 14px;font-size:14px}
+.au-sw{font-size:14px}
+.au-go{padding-top:12px;padding-bottom:12px}
+@media (max-width:860px){.au-side{padding:22px 20px}.au-card{padding:22px 18px}.au-side h2{font-size:24px}}

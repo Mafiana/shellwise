@@ -10,10 +10,15 @@ export const setCoupon = (c) => { try { if (c) localStorage.setItem(CK, c); else
 export async function startCheckout({ plan, interval, coupon = getCoupon() }) {
   if (!PAYMENTS_ENABLED || !supabase) throw new Error('Payments are not switched on yet.')
   const { data, error } = await supabase.functions.invoke('paystack-init', { body: { plan, interval, coupon } })
-  if (error) {
-    let m = 'Could not start the payment. Please try again.'
-    try { const j = await error.context.json(); if (j && /discount code/i.test(j.error || '')) { m = j.error; setCoupon('') } } catch { /* keep the generic message */ }
-    throw new Error(m)
+  if (error || data?.error) {
+    let m = 'Could not start the payment. Please try again.', why = ''
+    try {
+      const j = data?.error ? data : await error.context.json()
+      why = String((j && (j.error || j.message)) || '')
+      if (/discount code/i.test(why)) { m = why; setCoupon(''); why = '' }
+    } catch { /* keep the generic message */ }
+    if (!why && error && (error.name === 'FunctionsFetchError' || /failed to send|failed to fetch|networkerror/i.test(String(error.message || '')))) why = 'the payment service could not be reached'
+    throw new Error(why ? `${m} (${why})` : m)
   }
   let url
   try { url = new URL(data?.authorization_url) } catch { url = null }

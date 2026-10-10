@@ -31,6 +31,16 @@ const withAv = (u) => {
   } catch { return u }
 }
 
+// Asks the server whether this sign-in still belongs to a real account (a deleted account's token stays "valid" until it expires).
+async function accountGone() {
+  try {
+    const { error } = await supabase.auth.getUser()
+    if (!error) return false
+    const c = String(error.code || ''), st = error.status
+    return st === 401 || st === 403 || st === 404 || /user_not_found|session_not_found|session_expired|bad_jwt/.test(c) || /user from sub claim|does not exist|not found/i.test(String(error.message || ''))
+  } catch { return false }
+}
+
 async function loadProfile(session) {
   const u = session.user
   // Learners whose paid period has ended go back to Free (a no-op for everyone else). Fails quietly if the SQL step has not been run.
@@ -74,7 +84,16 @@ export function AuthProvider({ children }) {
   // "Who is online": a light heartbeat once a minute while a signed-in person has the site open and visible.
   useEffect(() => {
     if (BACKEND !== 'supabase' || !user || user.guest) return
-    const ping = () => { if (!document.hidden) supabase.rpc('touch_seen').then(() => {}, () => {}) }
+    const ping = async () => {
+      if (document.hidden) return
+      if (await accountGone()) {
+        try { await supabase.auth.signOut({ scope: 'local' }) } catch { /* already gone */ }
+        try { localStorage.removeItem('kuser') } catch { /* ignore */ }
+        setUser(null)
+        return
+      }
+      supabase.rpc('touch_seen').then(() => {}, () => {})
+    }
     ping()
     const t = setInterval(ping, 60000)
     document.addEventListener('visibilitychange', ping)

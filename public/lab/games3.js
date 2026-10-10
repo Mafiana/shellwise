@@ -67,7 +67,7 @@ const TF=[
 ['A file named .bashrc is hidden by default.',1,'It starts with a dot.'],
 ['free -h shows disk usage.',0,'free shows memory; df shows disks.'],
 ['tar -czf creates a compressed archive.',1,'c = create, z = gzip, f = file.']];
-GAMES.tf=()=>mcq('tf','True or False',TF,10,7,t=>({q:esc(t[0]),a:t[1]?'True':'False',w:[t[1]?'False':'True'],why:t[2]}),'Decide whether each statement about Linux and security is true.');
+GAMES.tf=()=>mcq('tf','True or False',TF,10,7,t=>({q:esc(t[0]),a:t[1]?'True':'False',w:[t[1]?'False':'True'],why:t[2]}),'Decide whether each statement about Linux and security is true.',60);
 
 // ---- 2. Fill the Command ----
 const FC=[
@@ -107,7 +107,7 @@ const OO=[
 [['journalctl','dmesg','logger','mv'],'mv','The others work with logs; mv moves files.'],
 [['top','vmstat','uptime','touch'],'touch','The others report system load; touch creates a file.'],
 [['crontab','at','sleep','cat'],'cat','The others schedule or delay; cat prints files.']];
-GAMES.odd=()=>mcq('odd','Odd One Out',OO,10,7,o=>({q:'Which command does NOT belong with the others?',a:o[1],w:o[0].filter(x=>x!=o[1]),why:o[2]}),'Three commands share a job. Spot the one that does not.');
+GAMES.odd=()=>mcq('odd','Odd One Out',OO,10,7,o=>({q:'Which command does NOT belong with the others?',a:o[1],w:o[0].filter(x=>x!=o[1]),why:o[2]}),'Three commands share a job. Spot the one that does not.',60);
 
 // ---- 4. Directory Detective ----
 const DD=[
