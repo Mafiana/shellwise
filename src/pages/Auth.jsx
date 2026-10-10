@@ -12,6 +12,7 @@ import { UNAME, EMAIL_RE, lockLeft } from '../lib/localAuth.js'
 import { priceLine } from '../lib/money.js'
 
 const REF_KEY = 'kref'
+const UN_KEY = 'kgun' // username chosen before going to Google
 const cleanRef = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12)
 // A friend's invite link (?ref=CODE) is remembered in this browser until the account is created.
 const initRef = (q) => { const r = cleanRef(q.get('ref')); try { if (r) localStorage.setItem(REF_KEY, r); return r || cleanRef(localStorage.getItem(REF_KEY)) } catch { return r } }
@@ -30,7 +31,7 @@ export default function Auth() {
   const nav = useNavigate()
   const enter = useEnter()
   const { scrollToId } = useShell()
-  const { user, signUp, signIn, signInWithGoogle, checkUsername, verifyCode, resendCode, resetPassword } = useAuth()
+  const { user, signUp, signIn, signInWithGoogle, checkUsername, verifyCode, resendCode, resetPassword, refresh } = useAuth()
   const [mode, setMode] = useState(q.get('mode') === 'login' ? 'login' : 'signup')
   // The plan is chosen on this page (or arrives from the Plans section). Nobody can sign up without picking one.
   const [planId, setPlanId] = useState(() => (PLANS.some((p) => p.id === q.get('plan')) ? q.get('plan') : ''))
@@ -76,12 +77,19 @@ export default function Auth() {
   useEffect(() => { if (cool <= 0) return; const t = setTimeout(() => setCool((c) => c - 1), 1000); return () => clearTimeout(t) }, [cool])
   // Came back from the confirmation link in the email (the session is created by Supabase), so carry on.
   useEffect(() => {
-    if (q.get('verified') === '1' && user && !user.guest) claimRef().finally(() => proceed().catch((x) => bad(x.message)))
+    if (q.get('verified') === '1' && user && !user.guest) claimUname().then(claimRef).finally(() => proceed().catch((x) => bad(x.message)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
   // A friend's invite code typed before choosing Google is attached to the new account (only works for brand-new accounts).
   const claimRef = async () => {
     try { const r = cleanRef(localStorage.getItem(REF_KEY)); if (r) { await supabase.rpc('claim_referral', { code: r }); localStorage.removeItem(REF_KEY) } } catch { /* ignore */ }
+  }
+  // A new Google account gets the username chosen on the sign-up form (only works for brand-new accounts).
+  const claimUname = async () => {
+    try {
+      const u = localStorage.getItem(UN_KEY)
+      if (u) { localStorage.removeItem(UN_KEY); const { data } = await supabase.rpc('claim_username', { p_name: u }); if (data) await refresh() }
+    } catch { /* ignore */ }
   }
   const gDone = useRef(false)
   // Back from Google on the "Log in" tab: go to the lab (or the admin panel). The sign-up return is handled by verified=1 above.
@@ -117,6 +125,14 @@ export default function Auth() {
     if (BACKEND !== 'supabase') return bad('Google sign-in needs the server. It works once Supabase is connected.')
     if (signup && !planId) return bad('Choose a plan to continue. You can start with Free.')
     if (signup && !agree) return bad('Tick the box to accept the Terms and Conditions and the Privacy Policy.')
+    if (signup) {
+      const un = f.user.trim().toLowerCase()
+      if (!un) return bad('Choose a username first. It is required, even when you sign up with Google.')
+      if (!UNAME.test(un)) return bad('Choose a username of 3 to 20 characters. Start with a letter, then use letters, numbers or underscores.')
+      if (uAvail === false) return bad('That username is taken. Try another one.')
+      if (uAvail === 'checking') return bad('Checking that username. Try again in a moment.')
+      try { localStorage.setItem(UN_KEY, un) } catch { /* ignore */ }
+    }
     setBusy(true)
     try {
       const r = cleanRef(f.ref); if (signup && r) { try { localStorage.setItem(REF_KEY, r) } catch { /* ignore */ } }

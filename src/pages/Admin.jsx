@@ -586,7 +586,7 @@ function Payments() {
   const [note, setNote] = useState('')
   const load = useCallback(async () => {
     {
-      const { data, error } = await supabase.from('payments').select('reference,user_id,plan,interval,amount_kobo,status,created_at,paid_at,channel,coupon').order('created_at', { ascending: false }).limit(1000)
+      const { data, error } = await supabase.from('payments').select('*').order('created_at', { ascending: false }).limit(1000)
       if (error) return setErr('Could not load payments.')
       const ids = [...new Set((data || []).map((p) => p.user_id))]
       const names = {}
@@ -681,7 +681,7 @@ function Payments() {
           <tbody>
             {pg.rows.map((p) => (
               <tr key={p.reference}>
-                <td><b>{p.who?.username || 'deleted user'}</b><small>{p.who?.email || (p.user_id ? 'id ' + String(p.user_id).slice(0, 8) : '')}</small></td>
+                <td><b>{p.who?.username || 'deleted user'}</b><small>{p.who?.email || p.email || (p.user_id ? 'id ' + String(p.user_id).slice(0, 8) : 'account deleted')}</small></td>
                 <td><span className="pnl-ref"><code title={p.reference}>{p.reference.slice(0, 11)}...</code><button type="button" className="pnl-cp" onClick={() => copyRef(p.reference)} aria-label={`Copy reference ${p.reference}`}>{copied === p.reference ? 'Copied' : 'Copy'}</button></span></td>
                 <td className="cap">{p.plan} · {p.interval}</td>
                 <td className="r"><b>{ngn(p.amount_kobo)}</b>{p.coupon && <small>code {p.coupon}</small>}</td>
@@ -756,7 +756,14 @@ function Subscriptions() {
       const ids = (data || []).map((x) => x.user_id)
       const names = {}
       if (ids.length) { const { data: ps } = await supabase.from('profiles').select('id,username,email').in('id', ids); (ps || []).forEach((p) => { names[p.id] = p }) }
-      if (!off) setRows((data || []).map((x) => ({ ...x, who: names[x.user_id], state: subState(x) })))
+      // Plan start = the date of the learner's latest successful payment (falls back to one billing period before the end date).
+      const paid = {}
+      for (let i = 0; i < ids.length; i += 50) {
+        const { data: pp } = await supabase.from('payments').select('user_id,paid_at,created_at').eq('status', 'success').in('user_id', ids.slice(i, i + 50))
+        ;(pp || []).forEach((r) => { const t = new Date(r.paid_at || r.created_at).getTime(); if (!paid[r.user_id] || t > paid[r.user_id]) paid[r.user_id] = t })
+      }
+      const startOf = (x) => paid[x.user_id] || (x.current_period_end ? new Date(x.current_period_end).getTime() - (x.interval === 'yearly' ? 366 : 31) * 86400000 : 0)
+      if (!off) setRows((data || []).map((x) => ({ ...x, who: names[x.user_id], state: subState(x), start: startOf(x) })))
     })()
     return () => { off = true }
   }, [])
@@ -782,7 +789,7 @@ function Subscriptions() {
       {!shown.length ? <p className="pnl-dim">{rows.length ? 'No subscriptions match.' : 'No subscriptions yet. They appear here after a learner pays.'}</p> : (
         <>
           <div className="pnl-tw"><table className="pnl-tbl">
-            <thead><tr><th>Learner</th><th>Plan</th><th>Billing</th><th>Status</th><th>Period end</th></tr></thead>
+            <thead><tr><th>Learner</th><th>Plan</th><th>Billing</th><th>Status</th><th>Plan start</th><th>Plan end</th></tr></thead>
             <tbody>
               {pg.rows.map((r) => (
                 <tr key={r.user_id}>
@@ -790,6 +797,7 @@ function Subscriptions() {
                   <td><span className="pnl-pill" style={{ color: PLAN_COL[r.plan] || undefined }}>{PLAN_NAME[r.plan] || r.plan}</span></td>
                   <td className="nw">{r.interval === 'yearly' ? 'Yearly' : 'Monthly'}</td>
                   <td><span className={'pnl-pill sub-' + r.state}>{SUB_LABEL[r.state]}</span></td>
+                  <td className="nw">{r.start ? day(r.start) : '-'}</td>
                   <td className="nw">{day(r.current_period_end) || '-'}<small>{left(r)}</small></td>
                 </tr>
               ))}

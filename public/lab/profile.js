@@ -24,9 +24,9 @@
  window.goHome=function(){try{sv();save()}catch(e){}if(!toParent('home'))location.href=location.pathname};
  // ---- chip
  const side=document.getElementById('side');if(!side)return;
- const chip=document.createElement('button');chip.id='pchip';chip.type='button';chip.dataset.v='profile';chip.onclick=()=>go('profile');
+ const chip=document.createElement('button');chip.id='pchip';chip.type='button';chip.dataset.v='profile';chip.onclick=e=>{if(e&&e.target&&e.target.closest&&e.target.closest('.pmail')){e.stopPropagation();if(window.inbOpen)window.inbOpen();return}go('profile')};
  side.insertBefore(chip,side.children[1]||null);
- function paint(){const u=load();chip.innerHTML=`<span class="pav" style="background:${u.avatar?'#0b1020':grad(u)}">${u.avatar?`<img src="${u.avatar}" alt="">`:PERSON}</span><span class="pnm">${u.guest?'GUEST':esc(u.user)}</span>`;chip.title=u.guest?'Guest profile':'Profile: @'+u.user;chip.setAttribute('aria-label',u.guest?'Open guest profile':'Open profile for '+u.user)}
+ function paint(){const u=load();chip.innerHTML=`<span class="pav" style="background:${u.avatar?'#0b1020':grad(u)}">${u.avatar?`<img src="${u.avatar}" alt="">`:PERSON}</span><span class="pnm">${u.guest?'GUEST':esc(u.user)}</span>${u.guest?'':'<span class="pmail" role="button" tabindex="0" title="Messages" aria-label="Messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7.5 8.5 6 8.5-6"/></svg></span>'}`;chip.title=u.guest?'Guest profile':'Profile: @'+u.user;chip.setAttribute('aria-label',u.guest?'Open guest profile':'Open profile for '+u.user)}
  paint();window.addEventListener('kuser',paint);window.addEventListener('storage',e=>{if(e.key==KU)paint()});
  // ---- profile page (a normal view in the app, like Progress)
  function seg(into){const n=20,f=Math.floor(into/5);return Array.from({length:n},(_,i)=>`<i class="${i<f?'f':''}"></i>`).join('')}
