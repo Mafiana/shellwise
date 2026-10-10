@@ -24,12 +24,14 @@ const ago = (t) => {
 }
 const day = (t) => (t ? new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '')
 const isOnline = (t) => !!t && Date.now() - new Date(t).getTime() < ONLINE_MS
-const TABS = [['overview', 'Dashboard'], ['users', 'Users'], ['payments', 'Payments'], ['messages', 'Messages'], ['announcements', 'Announcements'], ['coupons', 'Coupons'], ['audit', 'Audit log']]
+const TABS = [['overview', 'Dashboard'], ['users', 'Users'], ['payments', 'Payments'], ['subscriptions', 'Subscriptions'], ['messages', 'Messages'], ['tickets', 'Tickets'], ['announcements', 'Announcements'], ['coupons', 'Coupons'], ['audit', 'Audit log']]
 const svg = (d) => <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>
 const ICON = {
   overview: svg(<><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v9.5h13V10" /><path d="M10 19.5v-5h4v5" /></>),
   users: svg(<><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" /><path d="M16 4.7a3.5 3.5 0 0 1 0 6.6" /><path d="M18 14.3c2 .7 3.5 2.6 3.5 5.7" /></>),
   payments: svg(<><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><path d="M2.5 10h19" /><path d="M6 15h4" /></>),
+  subscriptions: svg(<><path d="M20 12a8 8 0 1 1-2.5-5.8" /><path d="M20 4v4.5h-4.5" /><path d="m9 12 2 2 4-4" /></>),
+  tickets: svg(<><path d="M3 9a2 2 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a2 2 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z" /><path d="M9 9.5h6M9 13.5h4" /></>),
   messages: svg(<><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><path d="m3 7 9 6.5L21 7" /></>),
   announcements: svg(<><path d="m3 11 15-6v14L3 13z" /><path d="M7 13.5V18a2 2 0 0 0 2 2h1" /><path d="M21 9v6" /></>),
   coupons: svg(<><path d="M3 9a2 2 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a2 2 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z" /><path d="M14 5v14" strokeDasharray="2 3" /></>),
@@ -151,7 +153,7 @@ function Stat({ label, value, sub, tone }) {
 const GENDER = { male: 'Male', female: 'Female', other: 'Other', prefer_not: 'Prefer not to say' }
 const USER_COLS = 'id,username,full_name,email,plan,created_at,last_seen,suspended,is_admin,avatar,location,bio,gender,progress'
 
-function UserDrawer({ id, me, onClose, onChanged, onDeleted }) {
+function UserDrawer({ id, me, onClose, onChanged }) {
   const confirm = useConfirm()
   const [u, setU] = useState(null)
   const [pays, setPays] = useState([])
@@ -180,7 +182,8 @@ function UserDrawer({ id, me, onClose, onChanged, onDeleted }) {
     setBusy(false)
     if (error || data?.error) return setErr(await fnMsg(error, data, 'That action failed.'))
     onChanged()
-    if (body.action === 'delete_user') { onClose(); if (onDeleted) onDeleted() } else load()  }
+    if (body.action === 'delete_user') onClose(); else load()
+  }
   const pr = u?.progress || {}, st = pr.kstate || {}
   const modules = Array.isArray(pr.kdone) ? pr.kdone.filter(Boolean).length : 0
   const hasProg = !!(pr.kstate || pr.kdone)
@@ -498,7 +501,6 @@ function PwModal({ u, onClose }) {
 
 function Users({ me }) {
   const confirm = useConfirm()
-    const [ok, setOk] = useState('')
   const [rows, setRows] = useState(null)
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState('all')
@@ -537,17 +539,9 @@ function Users({ me }) {
           {[['all', 'All'], ['online', 'Online'], ['free', 'Free'], ['learner', 'Learner'], ['pro', 'Pro'], ['suspended', 'Suspended']].map(([v, t]) => <button key={v} className={filter === v ? 'on' : ''} onClick={() => setFilter(v)}>{t}</button>)}
         </div>
       </div>
-      {sel && <UserDrawer id={sel} me={me} onClose={() => setSel(null)} onChanged={load} onDeleted={() => {
-  setOk('Selected account and its data were deleted.')
-  setTimeout(() => setOk(''), 8000)
-}} />}
-{pwFor && <PwModal u={pwFor} onClose={() => setPwFor(null)} />}
-{ok && (
-  <div className="pnl-note" role="status">
-    <span>{ok}</span>
-    <button type="button" onClick={() => setOk('')} aria-label="Dismiss">✕</button>
-  </div>
-)}{err && <p className="pnl-err">{err}</p>}
+      {sel && <UserDrawer id={sel} me={me} onClose={() => setSel(null)} onChanged={load} />}
+      {pwFor && <PwModal u={pwFor} onClose={() => setPwFor(null)} />}
+      {err && <p className="pnl-err">{err}</p>}
       {!rows ? <p className="pnl-dim">Loading users...</p> : !rows.length ? <p className="pnl-dim">No users match.</p> : (
         <div className="pnl-tw"><table className="pnl-tbl">
           <thead><tr><th>User</th><th>Email</th><th>Plan</th><th>Joined</th><th>Last seen</th><th className="r">Actions</th></tr></thead>
@@ -596,7 +590,11 @@ function Payments() {
       if (error) return setErr('Could not load payments.')
       const ids = [...new Set((data || []).map((p) => p.user_id))]
       const names = {}
-      if (ids.length) { const { data: ps } = await supabase.from('profiles').select('id,username,email').in('id', ids); (ps || []).forEach((p) => { names[p.id] = p }) }
+      for (let i = 0; i < ids.length; i += 50) {
+        const { data: ps, error: pe } = await supabase.from('profiles').select('id,username,email').in('id', ids.slice(i, i + 50))
+        if (pe) console.error('Payments: could not load learner names', pe)
+        ;(ps || []).forEach((p) => { names[p.id] = p })
+      }
       setRows((data || []).map((p) => ({ ...p, who: names[p.user_id] })))
     }
   }, [])
@@ -674,7 +672,8 @@ function Payments() {
         </div>
       </div>
       <p className="pnl-dim pnl-sum">{shown.length} {shown.length === 1 ? 'payment' : 'payments'} · {ngn(total)} received
-{rows.some((p) => p.status === 'pending') && <button type="button" className="pnl-btn pnl-rc warn" onClick={() => recheck(null)} disabled={!!chk}>{chk === 'all' ? 'Checking...' : 'Recheck pending with Paystack'}</button>}      </p>
+        {rows.some((p) => p.status === 'pending') && <button type="button" className="pnl-btn pnl-rc" onClick={() => recheck(null)} disabled={!!chk}>{chk === 'all' ? 'Checking...' : 'Recheck pending with Paystack'}</button>}
+      </p>
       {note && <p className="pnl-ok" role="status">{note}</p>}
       {!shown.length ? <p className="pnl-dim">{rows.length ? 'No payments match these filters.' : 'No payments yet.'}</p> : (
         <div className="pnl-tw"><table className="pnl-tbl">
@@ -682,10 +681,8 @@ function Payments() {
           <tbody>
             {pg.rows.map((p) => (
               <tr key={p.reference}>
-<td>
-  <b>{p.who?.username || (p.user_id ? 'unknown' : 'deleted user')}</b>
-  <small>{p.who?.email || (p.user_id ? '' : 'account removed')}</small>
-</td>                <td><span className="pnl-ref"><code title={p.reference}>{p.reference.slice(0, 11)}...</code><button type="button" className="pnl-cp" onClick={() => copyRef(p.reference)} aria-label={`Copy reference ${p.reference}`}>{copied === p.reference ? 'Copied' : 'Copy'}</button></span></td>
+                <td><b>{p.who?.username || 'deleted user'}</b><small>{p.who?.email || (p.user_id ? 'id ' + String(p.user_id).slice(0, 8) : '')}</small></td>
+                <td><span className="pnl-ref"><code title={p.reference}>{p.reference.slice(0, 11)}...</code><button type="button" className="pnl-cp" onClick={() => copyRef(p.reference)} aria-label={`Copy reference ${p.reference}`}>{copied === p.reference ? 'Copied' : 'Copy'}</button></span></td>
                 <td className="cap">{p.plan} · {p.interval}</td>
                 <td className="r"><b>{ngn(p.amount_kobo)}</b>{p.coupon && <small>code {p.coupon}</small>}</td>
                 <td>{chName(p.channel)}</td>
@@ -734,6 +731,178 @@ function Messages() {
   )
 }
 
+
+// ---- Subscriptions: active, expired and cancelled ----
+// "Expired" = the paid period has ended. "Cancelled" = stopped renewing but still inside the period they paid for.
+const subState = (s) => {
+  const end = s.current_period_end ? new Date(s.current_period_end).getTime() : 0
+  if (end && end < Date.now()) return 'expired'
+  if (s.status === 'cancelled') return 'cancelled'
+  if (s.status === 'past_due') return 'past_due'
+  return 'active'
+}
+const SUB_LABEL = { active: 'Active', expired: 'Expired', cancelled: 'Cancelled', past_due: 'Past due' }
+function Subscriptions() {
+  const [rows, setRows] = useState(null)
+  const [err, setErr] = useState('')
+  const [f, setF] = useState('all')
+  const [q, setQ] = useState('')
+  useEffect(() => {
+    let off = false
+    ;(async () => {
+      const { data, error } = await supabase.from('subscriptions').select('user_id,plan,interval,status,current_period_end,updated_at').order('updated_at', { ascending: false }).limit(1000)
+      if (off) return
+      if (error) return setErr('Could not load subscriptions.')
+      const ids = (data || []).map((x) => x.user_id)
+      const names = {}
+      if (ids.length) { const { data: ps } = await supabase.from('profiles').select('id,username,email').in('id', ids); (ps || []).forEach((p) => { names[p.id] = p }) }
+      if (!off) setRows((data || []).map((x) => ({ ...x, who: names[x.user_id], state: subState(x) })))
+    })()
+    return () => { off = true }
+  }, [])
+  const counts = useMemo(() => { const c = { all: 0, active: 0, expired: 0, cancelled: 0, past_due: 0 }; (rows || []).forEach((r) => { c.all++; c[r.state]++ }); return c }, [rows])
+  const shown = useMemo(() => {
+    const t = q.trim().toLowerCase()
+    return (rows || []).filter((r) => (f === 'all' || r.state === f) && (!t || ((r.who?.username || '') + ' ' + (r.who?.email || '')).toLowerCase().includes(t)))
+  }, [rows, f, q])
+  const pg = usePager(shown, f + q)
+  if (err) return <p className="pnl-err">{err}</p>
+  if (!rows) return <p className="pnl-dim">Loading subscriptions...</p>
+  const left = (r) => { if (!r.current_period_end) return ''; const d = Math.ceil((new Date(r.current_period_end).getTime() - Date.now()) / 86400000); return d >= 0 ? d + ' day' + (d === 1 ? '' : 's') + ' left' : 'ended ' + Math.abs(d) + ' d ago' }
+  return (
+    <>
+      <div className="pnl-filters">
+        <div className="pnl-chips" role="group" aria-label="Filter by status">
+          {[['all', 'All'], ['active', 'Active'], ['expired', 'Expired'], ['cancelled', 'Cancelled'], ['past_due', 'Past due']].map(([v, t]) => (
+            <button key={v} type="button" className={f === v ? 'on' : ''} onClick={() => setF(v)}>{t} ({counts[v]})</button>
+          ))}
+        </div>
+        <label><span>Search</span><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Username or email" /></label>
+      </div>
+      {!shown.length ? <p className="pnl-dim">{rows.length ? 'No subscriptions match.' : 'No subscriptions yet. They appear here after a learner pays.'}</p> : (
+        <>
+          <div className="pnl-tw"><table className="pnl-tbl">
+            <thead><tr><th>Learner</th><th>Plan</th><th>Billing</th><th>Status</th><th>Period end</th></tr></thead>
+            <tbody>
+              {pg.rows.map((r) => (
+                <tr key={r.user_id}>
+                  <td><b>{r.who ? '@' + r.who.username : 'Deleted user'}</b><small>{r.who?.email || ''}</small></td>
+                  <td><span className="pnl-pill" style={{ color: PLAN_COL[r.plan] || undefined }}>{PLAN_NAME[r.plan] || r.plan}</span></td>
+                  <td className="nw">{r.interval === 'yearly' ? 'Yearly' : 'Monthly'}</td>
+                  <td><span className={'pnl-pill sub-' + r.state}>{SUB_LABEL[r.state]}</span></td>
+                  <td className="nw">{day(r.current_period_end) || '-'}<small>{left(r)}</small></td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+          <Pager {...pg.props} />
+        </>
+      )}
+    </>
+  )
+}
+
+// ---- Tickets: chat with learners who wrote to support from the lab ----
+function Tickets({ onChange }) {
+  const ask = useConfirm()
+  const [list, setList] = useState(null)
+  const [err, setErr] = useState('')
+  const [f, setF] = useState('open')
+  const [sel, setSel] = useState(null)
+  const [msgs, setMsgs] = useState([])
+  const [txt, setTxt] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState('')
+  const end = useRef(null)
+  const selRef = useRef(null)
+  selRef.current = sel
+  const loadList = useCallback(async () => {
+    const { data, error } = await supabase.from('support_tickets').select('id,user_id,subject,status,unread_admin,created_at,updated_at').order('updated_at', { ascending: false }).limit(300)
+    if (error) return setErr('Could not load tickets. Did you run supabase/upgrade-support.sql?')
+    setErr('')
+    const ids = [...new Set((data || []).map((t) => t.user_id))]
+    const names = {}
+    if (ids.length) { const { data: ps } = await supabase.from('profiles').select('id,username,email,plan').in('id', ids); (ps || []).forEach((p) => { names[p.id] = p }) }
+    setList((data || []).map((t) => ({ ...t, who: names[t.user_id] })))
+    if (onChange) onChange()
+  }, [onChange])
+  const loadMsgs = useCallback(async (id) => {
+    const { data } = await supabase.from('support_messages').select('id,sender,body,created_at').eq('ticket_id', id).order('id', { ascending: true }).limit(500)
+    if (selRef.current === id) setMsgs(data || [])
+  }, [])
+  useEffect(() => { loadList(); const t = setInterval(() => { loadList(); if (selRef.current) loadMsgs(selRef.current) }, 5000); return () => clearInterval(t) }, [loadList, loadMsgs])
+  useEffect(() => { if (end.current) end.current.scrollIntoView({ block: 'end' }) }, [msgs.length, sel])
+  const open = async (t) => {
+    setSel(t.id); setMsgs([]); setNote(''); setTxt('')
+    await loadMsgs(t.id)
+    if (t.unread_admin) { await supabase.rpc('support_admin_seen', { p_ticket: t.id }); loadList() }
+  }
+  const cur = list && list.find((t) => t.id === sel)
+  const send = async (e) => {
+    e && e.preventDefault()
+    const body = txt.trim()
+    if (!body || !cur || busy) return
+    setBusy(true); setNote('')
+    const { error } = await supabase.rpc('support_reply', { p_ticket: cur.id, p_body: body })
+    setBusy(false)
+    if (error) return setNote('Could not send the reply. Please try again.')
+    setTxt(''); await loadMsgs(cur.id); loadList()
+  }
+  const setStatus = async (isOpen) => {
+    if (!cur) return
+    if (!isOpen && !(await ask({ title: 'Close this ticket?', message: `The learner is told the ticket is closed. If they write again, a new ticket is opened.`, ok: 'Close ticket', tone: 'danger', icon: 'warn' }))) return
+    const { error } = await supabase.rpc('support_set_status', { p_ticket: cur.id, p_open: isOpen })
+    if (error) return setNote('Could not update the ticket.')
+    await loadMsgs(cur.id); loadList()
+  }
+  if (err) return <p className="pnl-err">{err}</p>
+  if (!list) return <p className="pnl-dim">Loading tickets...</p>
+  const n = { open: list.filter((t) => t.status === 'open').length, closed: list.filter((t) => t.status === 'closed').length }
+  const shown = list.filter((t) => f === 'all' || t.status === f)
+  return (
+    <div className={'pnl-tk' + (cur ? ' has' : '')}>
+      <section className="pnl-tkl" aria-label="Tickets">
+        <div className="pnl-chips" role="group" aria-label="Filter tickets">
+          {[['open', 'Open (' + n.open + ')'], ['closed', 'Closed (' + n.closed + ')'], ['all', 'All']].map(([v, t]) => <button key={v} type="button" className={f === v ? 'on' : ''} onClick={() => setF(v)}>{t}</button>)}
+        </div>
+        {!shown.length ? <p className="pnl-dim">{f === 'open' ? 'No open tickets. Learners who write to support from the lab show up here.' : 'Nothing here.'}</p> : shown.map((t) => (
+          <button key={t.id} type="button" className={'pnl-tki' + (t.id === sel ? ' on' : '') + (t.unread_admin ? ' new' : '')} onClick={() => open(t)}>
+            <span className="pnl-tkt"><b>{t.who ? '@' + t.who.username : 'Deleted user'}</b><time>{ago(t.updated_at)}</time></span>
+            <span className="pnl-tks">{t.subject || '(no subject)'}</span>
+            <span className="pnl-tkm"><span className={'pnl-pill sub-' + (t.status === 'open' ? 'active' : 'expired')}>{t.status === 'open' ? 'Open' : 'Closed'}</span>{t.unread_admin && <em>New</em>}</span>
+          </button>
+        ))}
+      </section>
+      <section className="pnl-tkc" aria-label="Conversation">
+        {!cur ? <p className="pnl-dim pnl-tkempty">Select a ticket to read it and reply.</p> : (
+          <>
+            <header className="pnl-tkh">
+              <button type="button" className="pnl-btn pnl-tkback" onClick={() => setSel(null)}>&lsaquo; Back</button>
+              <div><b>{cur.who ? '@' + cur.who.username : 'Deleted user'}</b><small>{cur.who?.email || ''}{cur.who?.plan ? ' · ' + (PLAN_NAME[cur.who.plan] || cur.who.plan) + ' plan' : ''} · ticket #{cur.id}</small></div>
+              {cur.status === 'open'
+                ? <button type="button" className="pnl-btn warn" onClick={() => setStatus(false)}>Close ticket</button>
+                : <button type="button" className="pnl-btn" onClick={() => setStatus(true)}>Reopen</button>}
+            </header>
+            <div className="pnl-tkb">
+              {msgs.map((m) => (
+                <div key={m.id} className={'pnl-bub ' + (m.sender === 'admin' ? 'me' : 'them')}><p>{m.body}</p><time>{when(m.created_at)}</time></div>
+              ))}
+              <div ref={end} />
+            </div>
+            {note && <p className="pnl-err">{note}</p>}
+            {cur.status === 'open' ? (
+              <form className="pnl-tkf" onSubmit={send}>
+                <textarea rows={2} maxLength={2000} value={txt} placeholder="Type your reply..." aria-label="Reply" onChange={(e) => setTxt(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) send(e) }} />
+                <button type="submit" className="pnl-btn pnl-send" disabled={busy || !txt.trim()}>{busy ? 'Sending...' : 'Send'}</button>
+              </form>
+            ) : <p className="pnl-dim pnl-tkclosed">This ticket is closed. Press Reopen to reply.</p>}
+          </>
+        )}
+      </section>
+    </div>
+  )
+}
+
 const SEEN_KEY = 'kadminseen'
 const SND_KEY = 'kadminsound'
 const ding = () => {
@@ -756,16 +925,14 @@ function Bell({ onGo }) {
   const known = useRef(null)
   const live = useRef({})
   live.current = { sound, onGo }
-    const load = useCallback(async () => {
-    const [p, m, u] = await Promise.all([
+  const load = useCallback(async () => {
+    const [p, m] = await Promise.all([
       supabase.from('payments').select('reference,plan,amount_kobo,status,created_at,paid_at').in('status', ['success', 'failed']).order('created_at', { ascending: false }).limit(15),
       supabase.from('contact_messages').select('id,name,topic,created_at').order('created_at', { ascending: false }).limit(15),
-      supabase.from('profiles').select('id,username,full_name,email,created_at').order('created_at', { ascending: false }).limit(15),
     ])
     const list = [
       ...(p.data || []).map((x) => ({ k: 'p' + x.reference, tab: 'payments', ok: x.status === 'success', t: x.paid_at || x.created_at, text: (x.status === 'success' ? 'Payment received' : 'Payment failed') + ' · ' + ngn(x.amount_kobo) + ' · ' + (x.plan || '') })),
       ...(m.data || []).map((x) => ({ k: 'm' + x.id, tab: 'messages', ok: true, t: x.created_at, text: 'New message from ' + x.name + ' · ' + (TOPIC[x.topic] || x.topic) })),
-      ...(u.data || []).map((x) => ({ k: 'u' + x.id, tab: 'users', ok: true, t: x.created_at, text: 'New user · @' + (x.username || 'unknown') + (x.full_name ? ' · ' + x.full_name : '') })),
     ].sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 20)
     const fresh = known.current ? list.filter((i) => !known.current.has(i.k)) : []
     known.current = new Set(list.map((i) => i.k))
@@ -784,10 +951,9 @@ function Bell({ onGo }) {
   useEffect(() => {
     load()
     const t = setInterval(load, 30000) // backup in case the live connection drops
-        const ch = supabase.channel('admin-alerts')
+    const ch = supabase.channel('admin-alerts')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, load)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contact_messages' }, load)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, load)
       .subscribe()
     return () => { clearInterval(t); supabase.removeChannel(ch) }
   }, [load])
@@ -832,7 +998,8 @@ function Bell({ onGo }) {
               <span className={'pnl-ic ' + (i.ok ? i.tab : 'bad')}>{ICON[i.tab]}</span>
               <span className="pnl-ittx"><b>{i.text}</b><small>{ago(i.t)}</small></span>
             </button>
-)) : <p className="pnl-dim pnl-popempty">Nothing yet. New users, payments and messages will show up here.</p>}        </div>
+          )) : <p className="pnl-dim pnl-popempty">Nothing yet. New payments and messages will show up here.</p>}
+        </div>
       )}
     </div>
   )
@@ -1090,8 +1257,8 @@ function Coupons() {
   )
 }
 
-const AUDIT_ACT = { plan_changed: ['Plan changed', ''], suspended: ['Suspended', 'failed'], restored: ['Restored', 'success'], deleted: ['Deleted', 'failed'], plan_expired: ['Plan ended', 'pending'], payment_verified: ['Payment confirmed', 'success'], password_reset: ['Password reset', 'pending'] }
-const AUDIT_FILTER = [['all', 'All'], ['plan_changed', 'Plan changed'], ['suspended', 'Suspended'], ['restored', 'Restored'], ['deleted', 'Deleted'], ['plan_expired', 'Plan ended'], ['payment_verified', 'Payment confirmed'], ['password_reset', 'Password reset']]
+const AUDIT_ACT = { plan_changed: ['Plan changed', ''], suspended: ['Suspended', 'failed'], restored: ['Restored', 'success'], deleted: ['Deleted', 'failed'], self_deleted: ['Deleted by user', 'failed'], plan_expired: ['Plan ended', 'pending'], payment_verified: ['Payment confirmed', 'success'], password_reset: ['Password reset', 'pending'] }
+const AUDIT_FILTER = [['all', 'All'], ['plan_changed', 'Plan changed'], ['suspended', 'Suspended'], ['restored', 'Restored'], ['deleted', 'Deleted'], ['self_deleted', 'Deleted by user'], ['plan_expired', 'Plan ended'], ['payment_verified', 'Payment confirmed'], ['password_reset', 'Password reset']]
 function Audit() {
   const [rows, setRows] = useState(null)
   const [err, setErr] = useState('')
@@ -1139,10 +1306,11 @@ function Audit() {
 }
 
 export default function Admin() {
-  const { user, ready } = useAuth()
+  const { user, ready, signOut } = useAuth()
   const [tab, setTab] = useState('overview')
   const [ov, setOv] = useState(null)
   const [ovErr, setOvErr] = useState('')
+  const [tkN, setTkN] = useState(0)
   const allowed = BACKEND === 'supabase' && !!user && !user.guest && user.isAdmin
   useEffect(() => { document.title = 'Admin · Shellwise' }, [])
   const loadOv = useCallback(async () => {
@@ -1154,6 +1322,14 @@ export default function Admin() {
     if (!allowed) return
     loadOv(); const t = setInterval(loadOv, 30000); return () => clearInterval(t)
   }, [allowed, loadOv])
+  const loadTk = useCallback(async () => {
+    const { count, error } = await supabase.from('support_tickets').select('id', { count: 'exact', head: true }).eq('status', 'open').eq('unread_admin', true)
+    if (!error) setTkN(count || 0)
+  }, [])
+  useEffect(() => {
+    if (!allowed) return
+    loadTk(); const t = setInterval(loadTk, 20000); return () => clearInterval(t)
+  }, [allowed, loadTk])
   // Phone menu: the sidebar becomes a drawer that slides in from the left.
   const [range, setRange] = useState(6) // months shown on the Dashboard
   const [menu, setMenu] = useState(false)
@@ -1192,11 +1368,14 @@ export default function Admin() {
           <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19" /></svg>
         </button>
         <Link className="pnl-brand" to="/"><img src="/assets/kali-logo-white.svg" alt="" width="18" height="18" /><span>Shellwise <em>admin</em></span></Link>
-        <nav aria-label="Admin sections">{TABS.map(([v, t]) => <button key={v} className={tab === v ? 'on' : ''} onClick={() => { setTab(v); setMenu(false) }}><span className="pnl-nl">{ICON[v]}{t}</span>{v === 'overview' && ov ? <i>{ov.online} online</i> : null}</button>)}</nav>
+        <nav aria-label="Admin sections">{TABS.map(([v, t]) => <button key={v} className={tab === v ? 'on' : ''} onClick={() => { setTab(v); setMenu(false) }}><span className="pnl-nl">{ICON[v]}{t}</span>{v === 'overview' && ov ? <i>{ov.online} online</i> : v === 'tickets' && tkN > 0 ? <i className="pnl-tkn">{tkN}</i> : null}</button>)}</nav>
         <Link className="pnl-out" to="/lab">{ICON.lab}Open the lab</Link>
         <div className="pnl-me">
           <span className="pnl-av">{user.avatar ? <img src={user.avatar} alt="" /> : (user.user || '?').slice(0, 1).toUpperCase()}</span>
           <span className="pnl-meinfo"><b>{user.user}</b><small>Administrator</small></span>
+          <button type="button" className="pnl-lo" title="Log out" aria-label="Log out" onClick={() => signOut()}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>
+          </button>
         </div>
       </aside>
       <main className="pnl-main">
@@ -1219,7 +1398,9 @@ export default function Admin() {
         {tab === 'overview' && <Overview data={ov} err={ovErr} range={range} />}
         {tab === 'users' && <Users me={user.id} />}
         {tab === 'payments' && <Payments />}
+        {tab === 'subscriptions' && <Subscriptions />}
         {tab === 'messages' && <Messages />}
+        {tab === 'tickets' && <Tickets onChange={loadTk} />}
         {tab === 'announcements' && <Announcements />}
         {tab === 'coupons' && <Coupons />}
         {tab === 'audit' && <Audit />}

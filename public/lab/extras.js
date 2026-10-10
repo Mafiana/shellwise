@@ -72,10 +72,17 @@
    <div class="xt-cal" aria-label="Last 28 days">${cells.join('')}</div>
    ${next?`<p class="dim">${next-st} more day${next-st==1?'':'s'} to a ${next}-day streak.</p>`:'<p class="dim">You are past a 30-day streak. Outstanding.</p>'}
    <div class="mc xt-card"><h3>Today's challenge</h3>
-    ${doneToday?`<p>Done. You scored <b>${D.done[t]}/${DAILY_N}</b>. Come back tomorrow to keep your streak alive.</p><p class="dim">New challenge in ${hoursLeft()}.</p>`
-    :`<p>${DAILY_N} questions, the same set for everyone today. Finish it to earn <b>${dailyXp(st+1)} XP</b> and extend your streak.</p><button class="btn" onclick="dcStart()">▶ Start today's challenge</button>`}</div>`;
+    ${doneToday?`<p>Done. You scored <b>${D.done[t]}/${DAILY_N}</b>. Come back tomorrow to keep your streak alive.</p>${cdBox('Next challenge in',false)}`
+    :`<p>${DAILY_N} questions, the same set for everyone today. Finish it to earn <b>${dailyXp(st+1)} XP</b> and extend your streak.</p>${cdBox('Today\'s challenge closes in',true)}<button class="btn" onclick="dcStart()">▶ Start today's challenge</button>`}</div>`;
   const locked=window.SWP&&!SWP.can('daily');
   return `<h2>Daily challenge</h2><p class=dim>One short set a day. Keep the streak going.</p>`+(locked?lockedCard('daily','Daily challenge and streaks','Build a habit with a new question set every day. Available on the Learner plan and above.'):body)};
+ // live countdown to local midnight (when the next daily set opens)
+ const msLeft=()=>{const n=new Date(),e=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1);return Math.max(0,e-n)};
+ const cdBox=(label,warn)=>{const t=Math.ceil(msLeft()/1000),h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;return `<div class="dc-cd${warn?' dc-warn':''}" id=dcCd data-day="${today()}" data-warn="${warn?1:0}" role="timer" aria-label="${label}"><span class=dc-l>${label}</span><span class=dc-t><b id=dcH>${pad(h)}</b><i>:</i><b id=dcM>${pad(m)}</b><i>:</i><b id=dcS>${pad(s)}</b></span></div>`};
+ setInterval(()=>{const c=document.getElementById('dcCd');if(!c)return;
+  if(c.dataset.day!==today()){if(!DQ&&document.querySelector('#side button[data-v=daily].on'))pv().innerHTML=R.daily();return}
+  const t=Math.ceil(msLeft()/1000),h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60,set=(i,v)=>{const e=document.getElementById(i);if(e)e.textContent=pad(v)};set('dcH',h);set('dcM',m);set('dcS',s);
+  c.classList.toggle('dc-low',c.dataset.warn=='1'&&t<3600)},1000);
  const hoursLeft=()=>{const n=new Date(),e=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1),h=Math.ceil((e-n)/36e5);return h+' hour'+(h==1?'':'s')};
  const dailyXp=s=>20+5*Math.min(Math.max(s,1),6);
  window.dcStart=function(){if(!gate('daily'))return;if(dd().done[today()]!==undefined)return go('daily');
@@ -100,7 +107,7 @@
    const keep={};Object.keys(D.done).sort().slice(-120).forEach(k=>keep[k]=D.done[k]);D.done=keep;wr('kdaily',D);
    xp=dailyXp(st);gain(xp);try{badges()}catch(e){}}
   const st=streakOf(dd().done);
-  pv().innerHTML=`<div class=qz><h2>Daily challenge complete</h2><div class=res><div class=ring style="--p:${Math.round(z.score/z.qs.length*100)}"><b>${z.score}/${z.qs.length}</b></div><div><h3>${st>=2?'🔥 '+st+'-day streak':'Streak started'}</h3><p>${xp?`+${xp} XP earned.`:'Already counted today.'} Come back tomorrow.</p></div></div><div class=md-act><button class=btn onclick="go('daily')">Back to daily</button></div></div>`}
+  pv().innerHTML=`<div class=qz><h2>Daily challenge complete</h2><div class=res><div class=ring style="--p:${Math.round(z.score/z.qs.length*100)}"><b>${z.score}/${z.qs.length}</b></div><div><h3>${st>=2?'🔥 '+st+'-day streak':'Streak started'}</h3><p>${xp?`+${xp} XP earned.`:'Already counted today.'} Come back tomorrow.</p></div></div>${cdBox('Next challenge in',false)}<div class=md-act><button class=btn onclick="go('daily')">Back to daily</button></div></div>`}
 
  // =====================================================================
  // TIMED EXAM MODE

@@ -74,6 +74,20 @@ export default function Lab() {
           const code = String((e.data.data && e.data.data.code) || '').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24)
           if (code.length >= 3) { setCoupon(code); nav('/', { state: { sc: 'plans' } }) }
         }
+      } else if (a === 'support' || a === 'supportsend') {
+        const reply = (data) => { try { frame.contentWindow.postMessage({ shellwiseReply: 'support', data }, window.location.origin) } catch { /* frame gone */ } }
+        const me = uref.current
+        if (BACKEND !== 'supabase' || !me || me.guest) return reply(null)
+        const load = (mark) => supabase.rpc('support_my', { p_mark: !!mark }).then(({ data, error }) => reply(error ? { error: 'Support is not set up yet.' } : data), () => reply({ error: 'Could not reach support.' }))
+        if (a === 'support') load(!!(e.data.data && e.data.data.mark))
+        else {
+          const body = String((e.data.data && e.data.data.body) || '').trim().slice(0, 2000)
+          if (!body) return
+          supabase.rpc('support_send', { p_body: body }).then(({ error }) => {
+            if (error) reply({ error: /slow down/.test(error.message) ? 'You are sending too fast. Wait a moment.' : 'Could not send your message. Please try again.' })
+            else load(true)
+          }, () => reply({ error: 'Could not reach support.' }))
+        }
       } else if (a === 'delete') {
         const reply = (m) => { try { frame.contentWindow.postMessage({ shellwiseReply: 'delete-failed', message: m }, window.location.origin) } catch { /* frame gone */ } }
         deleteAccount().then(() => nav('/', { state: { deleted: true } }), (x) => reply(x.message || 'Could not delete your account.'))
