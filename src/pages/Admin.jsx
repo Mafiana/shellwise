@@ -163,6 +163,11 @@ function Stat({ label, value, sub, tone }) {
 const GENDER = { male: 'Male', female: 'Female', other: 'Other', prefer_not: 'Prefer not to say' }
 const USER_COLS = 'id,username,full_name,email,plan,created_at,last_seen,suspended,is_admin,avatar,location,bio,gender,progress'
 
+const EB = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 'auto', marginTop: 10, padding: '9px 18px', borderRadius: 10, border: '1px solid #2f8cff66', background: 'linear-gradient(135deg,#2f8cff,#1f6fe0)', color: '#fff', fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', boxShadow: '0 6px 18px #2f8cff33' }
+const EF = { display: 'grid', gridTemplateColumns: '1fr', gap: 12, margin: '12px 0', padding: 14, border: '1px solid #ffffff22', borderRadius: 14, background: '#ffffff08' }
+const EL = { display: 'grid', gridTemplateColumns: '1fr', gap: 5, width: '100%', margin: 0 }
+const ES = { display: 'block', color: '#8fa0c4', fontWeight: 600, fontSize: 11, fontFamily: "'JetBrains Mono',monospace", textTransform: 'uppercase', letterSpacing: '.06em' }
+const EI = { display: 'block', width: '100%', boxSizing: 'border-box', background: '#0a1226', border: '1px solid #ffffff2e', color: '#fff', padding: '10px 12px', borderRadius: 10, fontSize: 14, fontFamily: 'inherit', colorScheme: 'dark', margin: 0 }
 function UserDrawer({ id, me, onClose, onChanged }) {
   const confirm = useConfirm()
   const [u, setU] = useState(null)
@@ -224,20 +229,20 @@ function UserDrawer({ id, me, onClose, onChanged }) {
                 <h3>{u.full_name || u.username}</h3>
                 <p className="pnl-dim">@{u.username} · {u.email}</p>
                 <div className="pnl-tags">{u.is_admin && <em>admin</em>}{u.suspended && <em className="s">suspended</em>}{isOnline(u.last_seen) && <em className="g">online</em>}</div>
-                {!edit && <button type="button" className="pnl-eb" onClick={startEdit}>Edit details</button>}
+                {!edit && <button type="button" className="pnl-eb" style={EB} onClick={startEdit}>Edit details</button>}
               </div>
             </div>
             {okMsg && <p className="pnl-ok">{okMsg}</p>}
             {edit && (
-              <form className="pnl-ef" onSubmit={saveEdit}>
-                <label><span>Full name</span><input value={edit.full_name} onChange={setE('full_name')} maxLength={60} /></label>
-                <label><span>Username</span><input value={edit.username} onChange={setE('username')} maxLength={20} autoCapitalize="none" spellCheck="false" /></label>
-                <label><span>Email</span><input type="email" value={edit.email} onChange={setE('email')} maxLength={254} /></label>
-                <label><span>Location</span><input value={edit.location} onChange={setE('location')} maxLength={60} /></label>
-                <label><span>Gender</span><select value={edit.gender} onChange={setE('gender')}><option value="">Not set</option>{Object.entries(GENDER).map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
-                <label><span>Bio</span><textarea rows={3} value={edit.bio} onChange={setE('bio')} maxLength={200} /></label>
+              <form className="pnl-ef" style={EF} onSubmit={saveEdit}>
+                <label style={EL}><span style={ES}>Full name</span><input style={EI} value={edit.full_name} onChange={setE('full_name')} maxLength={60} /></label>
+                <label style={EL}><span style={ES}>Username</span><input style={EI} value={edit.username} onChange={setE('username')} maxLength={20} autoCapitalize="none" spellCheck="false" /></label>
+                <label style={EL}><span style={ES}>Email</span><input style={EI} type="email" value={edit.email} onChange={setE('email')} maxLength={254} /></label>
+                <label style={EL}><span style={ES}>Location</span><input style={EI} value={edit.location} onChange={setE('location')} maxLength={60} /></label>
+                <label style={EL}><span style={ES}>Gender</span><select style={EI} value={edit.gender} onChange={setE('gender')}><option value="">Not set</option>{Object.entries(GENDER).map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
+                <label style={EL}><span style={ES}>Bio</span><textarea style={{ ...EI, resize: 'vertical' }} rows={3} value={edit.bio} onChange={setE('bio')} maxLength={200} /></label>
                 <small className="pnl-dim">Username: 3 to 20 characters, start with a letter, then letters, numbers or underscores. Changing the email also changes the login email.</small>
-                <div className="pnl-efa"><button type="submit" className="pnl-eb" disabled={busy}>{busy ? 'Saving...' : 'Save changes'}</button><button type="button" className="pnl-btn" onClick={() => setEdit(null)} disabled={busy}>Cancel</button></div>
+                <div className="pnl-efa"><button type="submit" className="pnl-eb" style={{ ...EB, marginTop: 0, opacity: busy ? 0.6 : 1 }} disabled={busy}>{busy ? 'Saving...' : 'Save changes'}</button><button type="button" className="pnl-btn" onClick={() => setEdit(null)} disabled={busy}>Cancel</button></div>
               </form>
             )}
             <dl className="pnl-kv">
