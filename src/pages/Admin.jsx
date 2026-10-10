@@ -705,7 +705,8 @@ function Payments() {
           <label><span>To</span><input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} /></label>
         </>}
         <div className="pnl-fact">
-<button type="button" className="pnl-btn" style={{ background: '#e5484d', borderColor: '#e5484d', color: '#fff', fontWeight: 700, opacity: (!filtered && !from && !to) ? 0.55 : 1 }} onClick={reset} disabled={!filtered && !from && !to}>Reset filter</button>          <button type="button" className="pnl-btn pnl-csv" onClick={exportCsv} disabled={!shown.length}>
+          <button type="button" className="pnl-btn" onClick={reset} disabled={!filtered && !from && !to}>Reset filter</button>
+          <button type="button" className="pnl-btn pnl-csv" onClick={exportCsv} disabled={!shown.length}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></svg>
             Export CSV
           </button>
@@ -1443,7 +1444,7 @@ function MobileUser({ user, signOut }) {
   const ring = { width: 42, height: 42, borderRadius: '50%', padding: 2, boxSizing: 'border-box', background: 'linear-gradient(135deg,#3aa0ff,#1f6fe0)', boxShadow: '0 0 14px #2f8cff88', display: 'grid', placeItems: 'center', overflow: 'hidden', flex: 'none', color: '#fff', font: '700 15px Inter,system-ui,sans-serif' }
   const pill = { width: 36, height: 26, borderRadius: 13, border: '1px solid #2f6fe0', background: '#0b1630', color: '#4d9bff', display: 'grid', placeItems: 'center', cursor: 'pointer', padding: 0 }
   const menu = { position: 'absolute', right: 0, top: 'calc(100% + 10px)', zIndex: 70, minWidth: 190, padding: 10, borderRadius: 14, border: '1px solid #2f6fe0', background: '#0b1226', boxShadow: '0 18px 40px #000a, 0 0 18px #2f8cff33' }
-  const out = { width: '100%', height: 34, border: 0, borderRadius: 10, background: '#e5484d', color: '#fff', font: '650 10px Inter,system-ui,sans-serif', cursor: 'pointer' }
+  const out = { width: '100%', height: 42, border: 0, borderRadius: 10, background: '#e5484d', color: '#fff', font: '700 15px Inter,system-ui,sans-serif', cursor: 'pointer' }
   return (
     <div ref={ref} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
       <span style={ring}>{user.avatar ? <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', display: 'block' }} /> : (user.user || '?').slice(0, 1).toUpperCase()}</span>
@@ -1466,6 +1467,7 @@ export default function Admin() {
   const [ov, setOv] = useState(null)
   const [ovErr, setOvErr] = useState('')
   const [tkN, setTkN] = useState(0)
+  const [msgN, setMsgN] = useState(0) // contact messages still marked New
   const allowed = BACKEND === 'supabase' && !!user && !user.guest && user.isAdmin
   useEffect(() => { document.title = 'Admin · Shellwise' }, [])
   const loadOv = useCallback(async () => {
@@ -1485,10 +1487,17 @@ export default function Admin() {
     const { count, error } = await supabase.from('support_tickets').select('id', { count: 'exact', head: true }).eq('status', 'open').eq('unread_admin', true)
     if (!error) setTkN(count || 0)
   }, [])
+  const loadMsgN = useCallback(async () => {
+    const { count, error } = await supabase.from('contact_messages').select('id', { count: 'exact', head: true }).eq('status', 'new')
+    if (!error) setMsgN(count || 0)
+  }, [])
   useEffect(() => {
     if (!allowed) return
-    loadTk(); const t = setInterval(loadTk, 10000); return () => clearInterval(t)
-  }, [allowed, loadTk])
+    loadTk(); loadMsgN()
+    const t = setInterval(() => { loadTk(); loadMsgN() }, 10000)
+    return () => clearInterval(t)
+  }, [allowed, loadTk, loadMsgN])
+  useEffect(() => { if (allowed) loadMsgN() }, [tab, allowed, loadMsgN])
   // Phone menu: the sidebar becomes a drawer that slides in from the left.
   const [range, setRange] = useState(6) // months shown on the Dashboard
   const [menu, setMenu] = useState(false)
@@ -1520,7 +1529,8 @@ export default function Admin() {
   if (!allowed) return <Navigate to={user && !user.guest ? '/' : '/auth?mode=login&next=%2Fadmin'} replace />
   return (
     <ConfirmHost>
-    <div className="pnl" style={wide ? undefined : { alignContent: 'start', gridTemplateRows: 'auto minmax(0, 1fr)' }}>      <header className="pnl-mbar">
+    <div className="pnl" style={wide ? undefined : { alignContent: 'start', gridTemplateRows: 'auto minmax(0, 1fr)' }}>
+      <header className="pnl-mbar">
         <button type="button" className="pnl-burger" aria-label="Open menu" aria-expanded={menu} aria-controls="pnl-drawer" onClick={() => setMenu(true)}>
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
         </button>
@@ -1533,8 +1543,15 @@ export default function Admin() {
           <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19" /></svg>
         </button>
         <Link className="pnl-brand" to="/"><img src="/assets/kali-logo-white.svg" alt="" width="18" height="18" /><span>Shellwise <em>admin</em></span></Link>
-        <nav aria-label="Admin sections">{TABS.map(([v, t]) => <button key={v} className={tab === v ? 'on' : ''} onClick={() => { setTab(v); setMenu(false) }}><span className="pnl-nl">{ICON[v]}{t}</span>{v === 'overview' && ov ? <i>{ov.online} online</i> : v === 'tickets' && tkN > 0 ? <i className="pnl-tkn">{tkN}</i> : null}</button>)}</nav>
-<Link className="pnl-out" to="/lab" style={{ padding: '7px 12px', fontSize: 13, gap: 8, borderRadius: 9 }}>{ICON.lab}Open the lab</Link>     
+        <nav aria-label="Admin sections">{TABS.map(([v, t]) => <button key={v} className={tab === v ? 'on' : ''} onClick={() => { setTab(v); setMenu(false) }}><span className="pnl-nl">{v === 'messages' && msgN > 0 ? <span style={{ display: 'inline-flex', color: '#ffb454', animation: 'pnlmb 1.1s ease-in-out infinite' }} title={msgN + ' new message' + (msgN > 1 ? 's' : '')}>{ICON[v]}</span> : ICON[v]}{t}</span>{v === 'overview' && ov ? <i>{ov.online} online</i> : v === 'tickets' && tkN > 0 ? <i className="pnl-tkn">{tkN}</i> : v === 'messages' && msgN > 0 ? <i className="pnl-tkn">{msgN}</i> : null}</button>)}<style>{'@keyframes pnlmb{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.25;transform:scale(1.18)}}'}</style></nav>
+        <Link className="pnl-out" to="/lab">{ICON.lab}Open the lab</Link>
+        <div className="pnl-me">
+          <span className="pnl-av">{user.avatar ? <img src={user.avatar} alt="" /> : (user.user || '?').slice(0, 1).toUpperCase()}</span>
+          <span className="pnl-meinfo"><b>{user.user}</b><small>Administrator</small></span>
+          <button type="button" className="pnl-lo" title="Log out" aria-label="Log out" onClick={() => signOut()}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>
+          </button>
+        </div>
       </aside>
       <main className="pnl-main">
         <header className="pnl-head">

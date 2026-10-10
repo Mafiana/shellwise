@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase.js'
 import { BACKEND } from '../lib/config.js'
 import { EMAIL_RE } from '../lib/localAuth.js'
 
-const TOPICS = [['general', 'General question'], ['billing', 'Plans and billing'], ['bug', 'Report a bug'], ['feedback', 'Feedback'], ['partnership', 'Partnership']]
+const TOPICS = [['general', 'General question'], ['password', 'Password reset'], ['billing', 'Plans and billing'], ['bug', 'Report a bug'], ['feedback', 'Feedback'], ['partnership', 'Partnership']]
 const MAX = 1500
 
 const Send = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z" /></svg>
@@ -51,8 +51,7 @@ export default function Contact() {
           <span className="cn-k">Contact</span>
           <h2>Let&apos;s talk</h2>
           <p>A question about the lab, a problem with a payment, or an idea to make it better. Tell us and we will reply by email.</p>
-          <p className="cn-fine">Billing question? Include the email you signed up with. Please never send your password or card details.</p>
-        </aside>
+          <p className="cn-fine">Password reset? Include the email you signed up with. As a New Password will be sent to that mail.</p>        </aside>
         {done ? (
           <div className="cn-form cn-ok" role="status">
             <div className="cn-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 5 5L20 7" /></svg></div>

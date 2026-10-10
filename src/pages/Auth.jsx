@@ -26,6 +26,98 @@ const strength = (v) => {
   return v ? s : 0
 }
 
+// "Forgot password" pop-up: asks for the account email, sends the reset link, shows progress, and after 2 minutes points to the admin.
+function ForgotModal({ start, onClose }) {
+  // A reset requested in the last 2 minutes is remembered, so closing and reopening the pop-up keeps the same progress screen.
+  const saved = (() => { try { const v = JSON.parse(localStorage.getItem('kfp') || 'null'); if (v && v.e && Date.now() - v.t < 120000) return v } catch (x) { /* no storage */ } return null })()
+  const [email, setEmail] = useState(saved ? saved.e : (start || ''))
+  const [stage, setStage] = useState(saved ? 'progress' : 'form') // 'form' | 'progress'
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [left, setLeft] = useState(saved ? Math.max(0, 120 - Math.floor((Date.now() - saved.t) / 1000)) : 120)
+  const sentTo = useRef(saved ? saved.e : '')
+  const t0 = useRef(saved ? saved.t : Date.now())
+  const nav = useNavigate()
+  // Go to the home page and scroll to the "Let's talk" section (the router does not scroll to #anchors by itself).
+  const goTalk = (e) => {
+    e.preventDefault(); onClose(); nav('/')
+    let n = 0
+    const t = setInterval(() => {
+      const el = document.getElementById('contact')
+      if (el) { clearInterval(t); el.scrollIntoView({ behavior: 'smooth', block: 'start' }) } else if (++n > 40) clearInterval(t)
+    }, 100)
+  }
+  useEffect(() => {
+    const k = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', k)
+    return () => document.removeEventListener('keydown', k)
+  }, [onClose])
+  useEffect(() => {
+    if (stage !== 'progress') return
+    const tick = () => setLeft(Math.max(0, 120 - Math.floor((Date.now() - t0.current) / 1000)))
+    tick()
+    const t = setInterval(tick, 1000)
+    return () => clearInterval(t)
+  }, [stage])
+  const submit = async (e) => {
+    e.preventDefault()
+    const em = email.trim().toLowerCase()
+    setErr('')
+    if (BACKEND !== 'supabase') return setErr('Password reset needs the server. It works once Supabase is connected.')
+    if (!EMAIL_RE.test(em)) return setErr('Enter the email address you used for your account.')
+    setBusy(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(em, { redirectTo: window.location.origin + '/auth?mode=reset' })
+    setBusy(false)
+    if (error && /rate|too many|seconds/i.test(error.message)) return setErr('Too many attempts. Please wait a minute and try again.')
+    sentTo.current = em
+    t0.current = Date.now()
+    try { localStorage.setItem('kfp', JSON.stringify({ e: em, t: t0.current })) } catch (x) { /* no storage */ }
+    setStage('progress')
+  }
+  const mm = String(Math.floor(left / 60)) + ':' + String(left % 60).padStart(2, '0')
+  const S = {
+    ov: { position: 'fixed', inset: 0, zIndex: 300, display: 'grid', placeItems: 'center', padding: 16, background: 'rgba(5,10,22,.78)', backdropFilter: 'blur(3px)' },
+    box: { position: 'relative', width: 'min(420px,100%)', boxSizing: 'border-box', padding: '26px 22px 22px', borderRadius: 18, border: '1px solid #2f6fe055', background: '#0b1226', color: '#e8eefc', boxShadow: '0 24px 60px #000a, 0 0 24px #2f8cff22', fontFamily: 'Inter,system-ui,sans-serif' },
+    x: { position: 'absolute', top: 10, right: 10, width: 34, height: 34, borderRadius: 10, border: '1px solid #ffffff22', background: '#ffffff0d', color: '#fff', fontSize: 22, lineHeight: 1, cursor: 'pointer' },
+    h: { margin: '0 0 6px', fontSize: 18, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase' },
+    p: { margin: '0 0 16px', color: '#8fa0c4', fontSize: 14, lineHeight: 1.5 },
+    inp: { display: 'block', width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 12, border: '1px solid #ffffff2e', background: '#0a1226', color: '#fff', fontSize: 15, fontFamily: 'inherit', outline: 'none', marginBottom: 12 },
+    btn: { width: '100%', height: 46, border: 0, borderRadius: 12, background: 'linear-gradient(135deg,#2f8cff,#1f6fe0)', color: '#fff', fontWeight: 700, fontSize: 15, fontFamily: 'inherit', cursor: 'pointer' },
+    err: { margin: '0 0 12px', color: '#ff8a96', fontSize: 14 },
+    prog: { display: 'flex', gap: 12, alignItems: 'center', padding: '14px', borderRadius: 12, background: '#2f8cff14', border: '1px solid #2f8cff44', marginBottom: 12 },
+    warn: { padding: '14px', borderRadius: 12, background: '#ffb4541a', border: '1px solid #ffb45455', color: '#ffd9a0', fontSize: 14, lineHeight: 1.5, marginBottom: 12 },
+  }
+  return (
+    <div style={S.ov} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={S.box} role="dialog" aria-modal="true" aria-labelledby="fp-h">
+        <button type="button" style={S.x} aria-label="Close" onClick={onClose}>&times;</button>
+        <h2 id="fp-h" style={S.h}>Forgot password</h2>
+        {stage === 'form' ? (
+          <form onSubmit={submit} noValidate>
+            <p style={S.p}>Enter the email you used to create your account and we will send you a reset link.</p>
+            <input style={S.inp} type="email" autoComplete="email" autoFocus placeholder="Account email" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Account email" />
+            {err && <p style={S.err} role="alert">{err}</p>}
+            <button type="submit" style={{ ...S.btn, opacity: busy ? 0.7 : 1 }} disabled={busy}>{busy ? 'Please wait...' : 'Reset password'}</button>
+            <p style={{ margin: '14px 0 0', textAlign: 'center', color: '#8fa0c4', fontSize: 13 }}>Didn&apos;t get the email? <a href="/#contact" onClick={goTalk} style={{ color: '#7db8ff', fontWeight: 700, textDecoration: 'underline' }}>Contact us</a></p>
+          </form>
+        ) : (
+          <div role="status" aria-live="polite">
+            <div style={S.prog}>
+              <span style={{ width: 18, height: 18, borderRadius: '50%', border: '3px solid #2f8cff55', borderTopColor: '#2f8cff', animation: 'fpspin .9s linear infinite', flex: 'none' }} />
+              <div><b>Reset in progress</b><div style={{ color: '#8fa0c4', fontSize: 13, marginTop: 2 }}>We are sending a reset link to {sentTo.current}. Check your inbox and your spam folder, then open the link on this device.</div></div>
+            </div>
+            {left > 0
+              ? <p style={S.p}>This usually takes under 2 minutes. Time left: <b style={{ color: '#fff' }}>{mm}</b></p>
+              : <div style={S.warn}>This is taking longer than expected. Kindly contact the admin and we will help you get back in. <a href="/#contact" onClick={goTalk} style={{ color: '#fff', fontWeight: 700, textDecoration: 'underline' }}>Contact us</a></div>}
+            <button type="button" style={{ ...S.btn, background: '#ffffff12', border: '1px solid #ffffff22' }} onClick={onClose}>Close</button>
+          </div>
+        )}
+        <style>{'@keyframes fpspin{to{transform:rotate(360deg)}}'}</style>
+      </div>
+    </div>
+  )
+}
+
 export default function Auth() {
   const [q] = useSearchParams()
   const nav = useNavigate()
@@ -49,6 +141,7 @@ export default function Auth() {
   const [rp, setRp] = useState({ a: '', b: '' })
   const [waited, setWaited] = useState(false)
   const [okMsg, setOkMsg] = useState('')
+  const [fpOpen, setFpOpen] = useState(false)
   const [code, setCode] = useState('')
   const [cool, setCool] = useState(0)
   const [uAvail, setUAvail] = useState(null) // null unknown, 'checking', true free, false taken
@@ -273,11 +366,12 @@ export default function Auth() {
             </>}
             <p className="au-sw">{signup
               ? <>Already have an account? <button type="button" onClick={() => setMode('login')}>Log in</button></>
-              : <>New here? <button type="button" onClick={() => setMode('signup')}>Create an account</button> · <button type="button" onClick={forgot}>Forgot password?</button></>}</p>
+              : <>New here? <button type="button" onClick={() => setMode('signup')}>Create an account</button> · <button type="button" onClick={() => setFpOpen(true)}>Forgot password?</button></>}</p>
           </form>
           )}
         </div>
       </div></div>
+      {fpOpen && <ForgotModal start={f.email} onClose={() => setFpOpen(false)} />}
     </section>
   )
 }
