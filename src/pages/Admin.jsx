@@ -12,9 +12,8 @@ async function fnMsg(error, data, fallback) {
   if (error && (error.name === 'FunctionsFetchError' || /failed to send|networkerror|failed to fetch/i.test(String(error.message || '')))) return 'Could not reach the server function. Check that it is deployed (and redeploy it if you just changed it), then try again.'
   return fallback
 }
-// Money can be hidden with the eye button (like a banking app). The choice is remembered in this browser.
-let HIDE_MONEY = false
-try { HIDE_MONEY = localStorage.getItem('pnlhide') === '1' } catch { /* private mode */ }
+// Amounts start hidden every time the admin page loads (like a banking app). Click the eye to show them.
+let HIDE_MONEY = true
 const ngn = (kobo) => (HIDE_MONEY ? '₦••••••' : '₦' + Math.round((+kobo || 0) / 100).toLocaleString('en-NG'))
 const EYE = (off) => (
   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -853,10 +852,14 @@ function Messages() {
         <label><span>Search</span><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name, email or text" /></label>
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', margin: '0 0 12px' }}>
-        <button type="button" className="pnl-btn" onClick={markAll} disabled={!counts.new} style={{ flex: '1 1 200px', maxWidth: 260, minHeight: 40, justifyContent: 'center', opacity: counts.new ? 1 : .55 }}>{'\u2713'} Mark all as read{counts.new ? ' (' + counts.new + ')' : ''}</button>
-        <span style={{ display: 'inline-flex', gap: 14, flexWrap: 'wrap', fontSize: 12.5, opacity: .85 }}>
-          <span><i style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: '#2f8cff', marginRight: 6 }} />Unread</span>
-          <span><i style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: 'rgba(127,127,127,.5)', marginRight: 6 }} />Read</span>
+        <button type="button" className="pnl-btn" onClick={markAll} disabled={!counts.new} style={{ flex: '1 1 200px', maxWidth: 260, minHeight: 40, justifyContent: 'center', background: '#e5484d', borderColor: '#e5484d', color: '#fff', fontWeight: 700, opacity: counts.new ? 1 : .5 }}>{'\u2713'} Mark all as read{counts.new ? ' (' + counts.new + ')' : ''}</button>
+        <span style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap', fontSize: 13 }}>
+          {[['new', 'Unread', '#2f8cff'], ['read', 'Read', 'rgba(127,127,127,.7)']].map(([v, t, col]) => (
+            <button key={v} type="button" aria-pressed={f === v} onClick={() => setF(f === v ? 'all' : v)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, cursor: 'pointer', font: 'inherit', color: 'inherit', background: f === v ? 'rgba(47,140,255,.18)' : 'transparent', border: '1px solid ' + (f === v ? '#2f8cff' : 'rgba(127,127,127,.4)') }}>
+              <i style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: col }} />{t} ({counts[v]})
+            </button>
+          ))}
         </span>
       </div>
       {note && <p className="pnl-err">{note}</p>}
@@ -1162,13 +1165,15 @@ function Bell({ onGo }) {
   const live = useRef({})
   live.current = { sound, onGo }
   const load = useCallback(async () => {
-    const [p, m] = await Promise.all([
+    const [p, m, fb] = await Promise.all([
       supabase.from('payments').select('reference,plan,amount_kobo,status,created_at,paid_at').in('status', ['success', 'failed']).order('created_at', { ascending: false }).limit(15),
       supabase.from('contact_messages').select('id,name,topic,created_at').order('created_at', { ascending: false }).limit(15),
+      supabase.from('feedback').select('id,user_name,kind,stars,created_at').order('created_at', { ascending: false }).limit(15),
     ])
     const list = [
       ...(p.data || []).map((x) => ({ k: 'p' + x.reference, tab: 'payments', ok: x.status === 'success', t: x.paid_at || x.created_at, text: (x.status === 'success' ? 'Payment received' : 'Payment failed') + ' · ' + ngn(x.amount_kobo) + ' · ' + (x.plan || '') })),
       ...(m.data || []).map((x) => ({ k: 'm' + x.id, tab: 'messages', ok: true, t: x.created_at, text: 'New message from ' + x.name + ' · ' + (TOPIC[x.topic] || x.topic) })),
+      ...(fb.data || []).map((x) => ({ k: 'f' + x.id, tab: 'feedback', ok: true, t: x.created_at, text: 'New ' + (FB_KIND[x.kind] || 'feedback').toLowerCase() + ' from ' + (x.user_name || 'a learner') + (x.stars ? ' · ' + x.stars + '\u2605' : '') })),
     ].sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 20)
     const fresh = known.current ? list.filter((i) => !known.current.has(i.k)) : []
     known.current = new Set(list.map((i) => i.k))
@@ -1190,6 +1195,7 @@ function Bell({ onGo }) {
     const ch = supabase.channel('admin-alerts')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, load)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contact_messages' }, load)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'feedback' }, load)
       .subscribe()
     return () => { clearInterval(t); supabase.removeChannel(ch) }
   }, [load])
@@ -1583,7 +1589,6 @@ export default function Admin() {
   const [hideM, setHideM] = useState(HIDE_MONEY) // amounts hidden with the eye button
   const toggleHide = () => {
     HIDE_MONEY = !HIDE_MONEY
-    try { localStorage.setItem('pnlhide', HIDE_MONEY ? '1' : '0') } catch { /* private mode */ }
     setHideM(HIDE_MONEY)
   }
   const allowed = BACKEND === 'supabase' && !!user && !user.guest && user.isAdmin
@@ -1667,13 +1672,6 @@ export default function Admin() {
         <Link className="pnl-brand" to="/"><img src="/assets/kali-logo-white.svg" alt="" width="18" height="18" /><span>Shellwise <em>admin</em></span></Link>
         <nav aria-label="Admin sections">{TABS.map(([v, t]) => <button key={v} className={tab === v ? 'on' : ''} onClick={() => { setTab(v); setMenu(false) }}><span className="pnl-nl">{(v === 'messages' && msgN > 0) || (v === 'feedback' && fbN > 0) ? <span style={{ display: 'inline-flex', color: '#ffb454', animation: 'pnlmb 1.1s ease-in-out infinite' }} title={(v === 'feedback' ? fbN + ' new feedback' : msgN + ' new message' + (msgN > 1 ? 's' : ''))}>{ICON[v]}</span> : ICON[v]}{t}</span>{v === 'overview' && ov ? <i>{ov.online} online</i> : v === 'tickets' && tkN > 0 ? <i className="pnl-tkn">{tkN}</i> : v === 'messages' && msgN > 0 ? <i className="pnl-tkn">{msgN}</i> : v === 'feedback' && fbN > 0 ? <i className="pnl-tkn">{fbN}</i> : null}</button>)}<style>{'@keyframes pnlmb{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.25;transform:scale(1.18)}}'}</style></nav>
         <Link className="pnl-out" to="/lab">{ICON.lab}Open the lab</Link>
-        <div className="pnl-me">
-          <span className="pnl-av">{user.avatar ? <img src={user.avatar} alt="" /> : (user.user || '?').slice(0, 1).toUpperCase()}</span>
-          <span className="pnl-meinfo"><b>{user.user}</b><small>Administrator</small></span>
-          <button type="button" className="pnl-lo" title="Log out" aria-label="Log out" onClick={() => signOut()}>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>
-          </button>
-        </div>
       </aside>
       <main className="pnl-main">
         <header className="pnl-head">
