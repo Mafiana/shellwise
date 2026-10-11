@@ -109,8 +109,38 @@
    if(document.querySelector('.pf-act')&&rewards.length&&!document.querySelector('.inb-rd')){try{if(typeof go=='function'&&document.querySelector('.pf'))go('profile')}catch(x){}}
   }
  });
- // First load, then every 5 minutes while the lab is open.
+ // ---- "You have a new message" pop-up ----
+ // A private message from the admin that is still unopened 5 minutes after it was sent pops up on top of whatever the
+ // learner is doing (games, modules, quizzes, the terminal). Each message pops up once; the dot stays until it is opened.
+ const AK='kmsgalert',WAIT=5*60000;
+ const ard=()=>{try{const a=JSON.parse(localStorage.getItem(AK)||'[]');return new Set(Array.isArray(a)?a:[])}catch(e){return new Set()}};
+ const awr=set=>{try{localStorage.setItem(AK,JSON.stringify([...set].slice(-300)))}catch(e){}};
+ if(!document.getElementById('inb-alert-css')){const c=document.createElement('style');c.id='inb-alert-css';c.textContent=
+  '@keyframes inbBlink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(1.2)}}'
+  +'#inba{position:fixed;right:16px;bottom:16px;z-index:2147483000;width:min(340px,calc(100vw - 32px));box-sizing:border-box;background:var(--side,#101a2e);color:var(--fg,#e6edf7);border:1px solid var(--blue,#2f8cff);border-radius:14px;padding:14px 14px 12px;box-shadow:0 18px 50px #000b;display:flex;gap:12px;align-items:flex-start}'
+  +'#inba .ia-ic{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:#2f8cff26;color:var(--blue,#2f8cff);animation:inbBlink 1s ease-in-out infinite}'
+  +'#inba .ia-ic svg{width:24px;height:24px}#inba b{display:block;font-size:15px;margin:1px 0 2px}#inba p{margin:0 0 10px;color:var(--dim,#8aa0bd);font-size:13px;line-height:1.35}'
+  +'#inba .ia-a{display:flex;gap:8px;flex-wrap:wrap}#inba .ia-a .btn{margin:0;padding:8px 14px}#inba .ia-l{background:none;border:0;color:var(--dim,#8aa0bd);font:inherit;cursor:pointer;text-decoration:underline;padding:8px 4px}'
+  +'@media(prefers-reduced-motion:reduce){#inba .ia-ic{animation:none}}';
+  document.head.appendChild(c)}
+ const alertClose=()=>{const a=document.getElementById('inba');if(a)a.remove()};
+ const alertCheck=()=>{
+  if(!user()||!box||document.hidden||document.getElementById('inba')||document.getElementById('inbm'))return;
+  const done=ard(),now=Date.now();
+  const due=newMsg().filter(m=>!done.has(m.id)&&now-new Date(m.created_at).getTime()>=WAIT);
+  if(!due.length)return;
+  due.forEach(m=>done.add(m.id));awr(done);
+  const n=due.length;
+  const d=document.createElement('div');d.id='inba';d.setAttribute('role','alertdialog');d.setAttribute('aria-label','New message');
+  d.innerHTML='<span class="ia-ic">'+ENV+'</span><div><b>You have '+(n>1?n+' new messages':'a new message')+'</b><p>'+esc(due[0].subject||'Message from Shellwise')+'. Tap to read it.</p><div class="ia-a"><button type="button" class="btn" data-r>Read now</button><button type="button" class="ia-l" data-c>Later</button></div></div>';
+  d.addEventListener('click',e=>{if(e.target.closest('[data-r]')){alertClose();inbOpen()}else if(e.target.closest('[data-c]'))alertClose()});
+  document.body.appendChild(d);
+ };
+ const poll=()=>{if(!embedded||!user()||document.hidden)return;boxAt=Date.now();ask('inbox')};
+ // First load, then check for new messages every 30 seconds (and when the tab comes back).
  window.addEventListener('sw-lab-ready',()=>refresh(true));
  setTimeout(()=>refresh(true),1500);
- setInterval(()=>refresh(true),300000);
+ setInterval(()=>{poll();alertCheck()},30000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden){poll();setTimeout(alertCheck,1500)}});
+ window.addEventListener('message',e=>{if(e.origin===location.origin&&e.source===window.parent&&e.data&&e.data.shellwiseReply==='inbox')setTimeout(alertCheck,50)});
 })();

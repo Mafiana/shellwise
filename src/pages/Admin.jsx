@@ -12,7 +12,23 @@ async function fnMsg(error, data, fallback) {
   if (error && (error.name === 'FunctionsFetchError' || /failed to send|networkerror|failed to fetch/i.test(String(error.message || '')))) return 'Could not reach the server function. Check that it is deployed (and redeploy it if you just changed it), then try again.'
   return fallback
 }
-const ngn = (kobo) => '₦' + Math.round((+kobo || 0) / 100).toLocaleString('en-NG')
+// Money can be hidden with the eye button (like a banking app). The choice is remembered in this browser.
+let HIDE_MONEY = false
+try { HIDE_MONEY = localStorage.getItem('pnlhide') === '1' } catch { /* private mode */ }
+const ngn = (kobo) => (HIDE_MONEY ? '₦••••••' : '₦' + Math.round((+kobo || 0) / 100).toLocaleString('en-NG'))
+const EYE = (off) => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />{off && <path d="m4 4 16 16" />}
+  </svg>
+)
+function EyeBtn({ hidden, onToggle }) {
+  return (
+    <button type="button" onClick={onToggle} aria-pressed={hidden} aria-label={hidden ? 'Show amounts' : 'Hide amounts'} title={hidden ? 'Show amounts' : 'Hide amounts'}
+      style={{ display: 'inline-grid', placeItems: 'center', width: 30, height: 30, marginLeft: 8, verticalAlign: 'middle', borderRadius: 8, border: '1px solid rgba(255,255,255,.28)', background: 'rgba(255,255,255,.12)', color: 'inherit', cursor: 'pointer', padding: 0 }}>
+      {EYE(hidden)}
+    </button>
+  )
+}
 const ONLINE_MS = 2 * 60 * 1000
 const ago = (t) => {
   if (!t) return 'never'
@@ -34,7 +50,7 @@ function useLive(load, ms = 15000, first = true) {
     return () => { clearInterval(t); document.removeEventListener('visibilitychange', tick); window.removeEventListener('focus', tick) }
   }, [load, ms, first])
 }
-const TABS = [['overview', 'Dashboard'], ['users', 'Users'], ['payments', 'Payments'], ['subscriptions', 'Subscriptions'], ['messages', 'Messages'], ['tickets', 'Tickets'], ['announcements', 'Announcements'], ['coupons', 'Coupons'], ['audit', 'Audit log']]
+const TABS = [['overview', 'Dashboard'], ['users', 'Users'], ['payments', 'Payments'], ['subscriptions', 'Subscriptions'], ['messages', 'Messages'], ['feedback', 'Feedback'], ['tickets', 'Tickets'], ['announcements', 'Announcements'], ['coupons', 'Coupons'], ['audit', 'Audit log']]
 const svg = (d) => <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>
 const ICON = {
   overview: svg(<><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v9.5h13V10" /><path d="M10 19.5v-5h4v5" /></>),
@@ -42,6 +58,7 @@ const ICON = {
   payments: svg(<><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><path d="M2.5 10h19" /><path d="M6 15h4" /></>),
   subscriptions: svg(<><path d="M20 12a8 8 0 1 1-2.5-5.8" /><path d="M20 4v4.5h-4.5" /><path d="m9 12 2 2 4-4" /></>),
   tickets: svg(<><path d="M3 9a2 2 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a2 2 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z" /><path d="M9 9.5h6M9 13.5h4" /></>),
+  feedback: svg(<path d="m12 3.2 2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.7l1.2-6L3.3 9.5l6.1-.7z" />),
   messages: svg(<><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><path d="m3 7 9 6.5L21 7" /></>),
   announcements: svg(<><path d="m3 11 15-6v14L3 13z" /><path d="M7 13.5V18a2 2 0 0 0 2 2h1" /><path d="M21 9v6" /></>),
   coupons: svg(<><path d="M3 9a2 2 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a2 2 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z" /><path d="M14 5v14" strokeDasharray="2 3" /></>),
@@ -355,7 +372,7 @@ function RevenueChart({ rows }) {
           return (
             <g key={i}>
               <line className={i ? 'pnl-gd' : 'pnl-gb'} shapeRendering="crispEdges" x1={XL - 8} x2={XR} y1={y} y2={y} />
-              <text className="pnl-rv-t" x={XL - 16} y={y + 4.5} textAnchor="end">{'₦' + compact((top * i) / 4)}</text>
+              <text className="pnl-rv-t" x={XL - 16} y={y + 4.5} textAnchor="end">{HIDE_MONEY ? '' : '₦' + compact((top * i) / 4)}</text>
             </g>
           )
         })}
@@ -447,7 +464,7 @@ function Charts({ data, c, err, range }) {
   )
 }
 
-function Overview({ data, err, range }) {
+function Overview({ data, err, range, hidden, onHide }) {
   const [c, setC] = useState(null)
   const [cerr, setCerr] = useState('')
   useEffect(() => {
@@ -466,7 +483,7 @@ function Overview({ data, err, range }) {
       <div className="pnl-kpis">
         <div className="pnl-kpi rev">
           <span className="ic">{KI.money}</span>
-          <div className="tx"><span className="lb">Total Revenue</span><b>{c ? ngn(total) : '...'}</b>
+          <div className="tx"><span className="lb">Total Revenue<EyeBtn hidden={hidden} onToggle={onHide} /></span><b>{c ? ngn(total) : '...'}</b>
             <div className="sb"><small>Last {range} months</small><em className={`tr ${g > 0 ? 'up' : g < 0 ? 'dn' : ''}`} title="This month compared with last month">{g > 0 ? '↗' : g < 0 ? '↘' : '–'} {Math.abs(g)}%</em></div></div>
         </div>
         <div className="pnl-kpi paid">
@@ -614,7 +631,7 @@ const PAY_RANGE = [['all', 'All time'], ['today', 'Today'], ['week', 'Last 7 day
 const sod = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x }
 const csvCell = (v) => { let t = String(v ?? ''); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return '"' + t.replace(/"/g, '""') + '"' }
 
-function Payments() {
+function Payments({ hidden, onHide }) {
   const [rows, setRows] = useState(null)
   const [err, setErr] = useState('')
   const [status, setStatus] = useState('all')
@@ -712,7 +729,7 @@ function Payments() {
           </button>
         </div>
       </div>
-      <p className="pnl-dim pnl-sum">{shown.length} {shown.length === 1 ? 'payment' : 'payments'} · {ngn(total)} received
+      <p className="pnl-dim pnl-sum">{shown.length} {shown.length === 1 ? 'payment' : 'payments'} · {ngn(total)} received<EyeBtn hidden={hidden} onToggle={onHide} />
         {rows.some((p) => p.status === 'pending') && <button type="button" className="pnl-btn pnl-rc" onClick={() => recheck(null)} disabled={!!chk}>{chk === 'all' ? 'Checking...' : 'Recheck pending with Paystack'}</button>}
       </p>
       {note && <p className="pnl-ok" role="status">{note}</p>}
@@ -740,7 +757,7 @@ function Payments() {
 }
 
 const TOPIC = { general: 'General', billing: 'Billing', bug: 'Bug', feedback: 'Feedback', partnership: 'Partnership' }
-const MSG_ST = { new: 'New', replied: 'Replied', closed: 'Closed' }
+const MSG_ST = { new: 'New', read: 'Read', replied: 'Replied', closed: 'Closed' }
 function Messages() {
   const [rows, setRows] = useState(null)
   const [err, setErr] = useState('')
@@ -762,9 +779,19 @@ function Messages() {
     const { data } = await supabase.from('contact_replies').select('id,body,sent_by_name,created_at').eq('message_id', id).order('created_at', { ascending: true })
     setReps(data || [])
   }, [])
-  const open = (m) => { setSel(m.id); setTxt(''); setNote(''); setOk(''); setReps([]); loadReps(m.id) }
+  const open = (m) => {
+    setSel(m.id); setTxt(''); setNote(''); setOk(''); setReps([]); loadReps(m.id)
+    if (st(m) === 'new') supabase.rpc('message_set_status', { p_id: m.id, p_status: 'read' }).then(() => load(), () => {}) // opening a message reads it
+  }
+  const markAll = async () => {
+    setNote(''); setOk('')
+    const { data, error } = await supabase.rpc('message_mark_all_read')
+    if (error) return setNote('Could not mark them read. Did you run supabase/upgrade-messages-read.sql?')
+    setOk(data ? data + ' message' + (data > 1 ? 's' : '') + ' marked as read.' : 'Nothing new to mark.')
+    load()
+  }
   const cur = rows && rows.find((m) => m.id === sel)
-  const counts = useMemo(() => { const c = { all: 0, new: 0, replied: 0, closed: 0 }; (rows || []).forEach((m) => { c.all++; c[st(m)]++ }); return c }, [rows])
+  const counts = useMemo(() => { const c = { all: 0, new: 0, read: 0, replied: 0, closed: 0 }; (rows || []).forEach((m) => { c.all++; c[st(m)] = (c[st(m)] || 0) + 1 }); return c }, [rows])
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase()
     return (rows || []).filter((m) => (f === 'all' || st(m) === f) && (!t || (m.name + ' ' + m.email + ' ' + m.message).toLowerCase().includes(t)))
@@ -804,7 +831,7 @@ function Messages() {
         {note && <p className="pnl-err">{note}</p>}
         {ok && <p className="pnl-ok">{ok}</p>}
         {s === 'closed' ? (
-          <p className="pnl-dim pnl-mqc">This message is closed. <button type="button" className="pnl-btn" onClick={() => setStatus('new')}>Reopen</button></p>
+          <p className="pnl-dim pnl-mqc">This message is closed. <button type="button" className="pnl-btn" onClick={() => setStatus('read')}>Reopen</button></p>
         ) : (
           <form className="pnl-tkf" onSubmit={send}>
             <textarea rows={3} maxLength={4000} value={txt} placeholder={`Write your reply. It will be emailed to ${cur.email}.`} aria-label="Reply" onChange={(e) => setTxt(e.target.value)} />
@@ -821,23 +848,107 @@ function Messages() {
     <>
       <div className="pnl-filters">
         <div className="pnl-chips" role="group" aria-label="Filter by status">
-          {[['all', 'All'], ['new', 'New'], ['replied', 'Replied'], ['closed', 'Closed']].map(([v, t]) => <button key={v} type="button" className={f === v ? 'on' : ''} onClick={() => setF(v)}>{t} ({counts[v]})</button>)}
+          {[['all', 'All'], ['new', 'New'], ['read', 'Read'], ['replied', 'Replied'], ['closed', 'Closed']].map(([v, t]) => <button key={v} type="button" className={f === v ? 'on' : ''} onClick={() => setF(v)}>{t} ({counts[v]})</button>)}
         </div>
         <label><span>Search</span><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name, email or text" /></label>
       </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', margin: '0 0 12px' }}>
+        <button type="button" className="pnl-btn" onClick={markAll} disabled={!counts.new} style={{ flex: '1 1 200px', maxWidth: 260, minHeight: 40, justifyContent: 'center', opacity: counts.new ? 1 : .55 }}>{'\u2713'} Mark all as read{counts.new ? ' (' + counts.new + ')' : ''}</button>
+        <span style={{ display: 'inline-flex', gap: 14, flexWrap: 'wrap', fontSize: 12.5, opacity: .85 }}>
+          <span><i style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: '#2f8cff', marginRight: 6 }} />Unread</span>
+          <span><i style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: 'rgba(127,127,127,.5)', marginRight: 6 }} />Read</span>
+        </span>
+      </div>
+      {note && <p className="pnl-err">{note}</p>}
+      {ok && <p className="pnl-ok">{ok}</p>}
       {!shown.length ? <p className="pnl-dim">{rows.length ? 'No messages match.' : 'No messages yet.'}</p> : (
         <>
           <div className="pnl-tw"><table className="pnl-tbl">
             <thead><tr><th>Date</th><th>From</th><th>Topic</th><th>Message</th><th>Status</th><th className="r">Reply</th></tr></thead>
             <tbody>
               {pg.rows.map((m) => (
-                <tr key={m.id}>
+                <tr key={m.id} style={st(m) === 'new' ? { background: 'rgba(47,140,255,.12)', boxShadow: 'inset 4px 0 0 #2f8cff', fontWeight: 600 } : { opacity: .72 }}>
                   <td className="nw">{day(m.created_at)}<small>{ago(m.created_at)}</small></td>
                   <td><b>{m.name}</b><small>{m.email}</small></td>
                   <td><span className="pnl-pill">{TOPIC[m.topic] || m.topic}</span></td>
                   <td className="msg">{m.message}</td>
                   <td><span className={'pnl-pill mq-' + st(m)}>{MSG_ST[st(m)]}</span></td>
                   <td className="r"><button type="button" className="pnl-btn" onClick={() => open(m)}>{st(m) === 'new' ? 'Reply' : 'Open'}</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+          <Pager {...pg.props} />
+        </>
+      )}
+    </>
+  )
+}
+
+// ---- Feedback: star ratings, feature ideas and bug reports from learners ----
+const FB_KIND = { feedback: 'Feedback', feature: 'Feature idea', bug: 'Bug' }
+function Feedback({ onChange }) {
+  const [rows, setRows] = useState(null)
+  const [err, setErr] = useState('')
+  const [f, setF] = useState('all')
+  const [note, setNote] = useState('')
+  const load = useCallback(async () => {
+    const { data, error } = await supabase.from('feedback').select('*').order('created_at', { ascending: false }).limit(500)
+    if (error) setErr('Could not load feedback. Did you run supabase/upgrade-feedback.sql?'); else { setErr(''); setRows(data) }
+  }, [])
+  useLive(load)
+  const rated = useMemo(() => (rows || []).filter((r) => r.stars), [rows])
+  const avg = rated.length ? rated.reduce((a, r) => a + r.stars, 0) / rated.length : 0
+  const dist = useMemo(() => { const d = [0, 0, 0, 0, 0, 0]; rated.forEach((r) => d[r.stars]++); return d }, [rated])
+  const counts = useMemo(() => { const c = { all: 0, new: 0, feedback: 0, feature: 0, bug: 0 }; (rows || []).forEach((r) => { c.all++; c[r.kind]++; if (r.status === 'new') c.new++ }); return c }, [rows])
+  const shown = useMemo(() => (rows || []).filter((r) => f === 'all' || (f === 'new' ? r.status === 'new' : r.kind === f)), [rows, f])
+  const pg = usePager(shown, f)
+  const mark = async (r, status) => {
+    setNote('')
+    const { error } = await supabase.rpc('feedback_set_status', { p_id: r.id, p_status: status })
+    if (error) return setNote('Could not update that item.')
+    load(); onChange && onChange()
+  }
+  if (err) return <p className="pnl-err">{err}</p>
+  if (!rows) return <p className="pnl-dim">Loading feedback...</p>
+  const stars = (n) => '\u2605'.repeat(n) + '\u2606'.repeat(5 - n)
+  return (
+    <>
+      <section className="pnl-card" style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center', padding: 16, marginBottom: 14 }}>
+        <div style={{ textAlign: 'center', minWidth: 110 }}>
+          <div style={{ fontSize: 38, fontWeight: 800, lineHeight: 1 }}>{rated.length ? avg.toFixed(1) : '-'}</div>
+          <div style={{ color: '#ffc53d', fontSize: 18, letterSpacing: 2 }} aria-label={avg.toFixed(1) + ' out of 5'}>{stars(Math.round(avg))}</div>
+          <small className="pnl-dim">{rated.length} rating{rated.length === 1 ? '' : 's'}</small>
+        </div>
+        <div style={{ flex: 1, minWidth: 220 }}>
+          {[5, 4, 3, 2, 1].map((n) => (
+            <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, margin: '3px 0' }}>
+              <span style={{ width: 24 }}>{n}{'\u2605'}</span>
+              <span style={{ flex: 1, height: 8, borderRadius: 4, background: 'rgba(127,127,127,.22)', overflow: 'hidden' }}><i style={{ display: 'block', height: '100%', width: (rated.length ? dist[n] / rated.length * 100 : 0) + '%', background: '#ffc53d' }} /></span>
+              <span style={{ width: 28, textAlign: 'right' }}>{dist[n]}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+      <div className="pnl-filters">
+        <div className="pnl-chips" role="group" aria-label="Filter feedback">
+          {[['all', 'All'], ['new', 'New'], ['feedback', 'Feedback'], ['feature', 'Feature ideas'], ['bug', 'Bugs']].map(([v, t]) => <button key={v} type="button" className={f === v ? 'on' : ''} onClick={() => setF(v)}>{t} ({counts[v]})</button>)}
+        </div>
+      </div>
+      {note && <p className="pnl-err">{note}</p>}
+      {!shown.length ? <p className="pnl-dim">{rows.length ? 'Nothing matches.' : 'No feedback yet.'}</p> : (
+        <>
+          <div className="pnl-tw"><table className="pnl-tbl">
+            <thead><tr><th>Date</th><th>From</th><th>Rating</th><th>Type</th><th>Message</th><th className="r">Status</th></tr></thead>
+            <tbody>
+              {pg.rows.map((r) => (
+                <tr key={r.id}>
+                  <td className="nw">{day(r.created_at)}<small>{ago(r.created_at)}</small></td>
+                  <td><b>{r.user_name || 'Learner'}</b><small>{r.user_email}</small></td>
+                  <td className="nw" style={{ color: '#ffc53d' }}>{r.stars ? stars(r.stars) : '-'}</td>
+                  <td><span className="pnl-pill">{FB_KIND[r.kind] || r.kind}</span></td>
+                  <td className="msg">{r.message || '-'}</td>
+                  <td className="r">{r.status === 'new' ? <button type="button" className="pnl-btn" onClick={() => mark(r, 'done')}>Mark done</button> : <button type="button" className="pnl-btn" onClick={() => mark(r, 'new')}>Done · reopen</button>}</td>
                 </tr>
               ))}
             </tbody>
@@ -1468,6 +1579,13 @@ export default function Admin() {
   const [ovErr, setOvErr] = useState('')
   const [tkN, setTkN] = useState(0)
   const [msgN, setMsgN] = useState(0) // contact messages still marked New
+  const [fbN, setFbN] = useState(0) // feedback still marked New
+  const [hideM, setHideM] = useState(HIDE_MONEY) // amounts hidden with the eye button
+  const toggleHide = () => {
+    HIDE_MONEY = !HIDE_MONEY
+    try { localStorage.setItem('pnlhide', HIDE_MONEY ? '1' : '0') } catch { /* private mode */ }
+    setHideM(HIDE_MONEY)
+  }
   const allowed = BACKEND === 'supabase' && !!user && !user.guest && user.isAdmin
   useEffect(() => { document.title = 'Admin · Shellwise' }, [])
   const loadOv = useCallback(async () => {
@@ -1491,12 +1609,16 @@ export default function Admin() {
     const { count, error } = await supabase.from('contact_messages').select('id', { count: 'exact', head: true }).eq('status', 'new')
     if (!error) setMsgN(count || 0)
   }, [])
+  const loadFbN = useCallback(async () => {
+    const { count, error } = await supabase.from('feedback').select('id', { count: 'exact', head: true }).eq('status', 'new')
+    if (!error) setFbN(count || 0)
+  }, [])
   useEffect(() => {
     if (!allowed) return
-    loadTk(); loadMsgN()
-    const t = setInterval(() => { loadTk(); loadMsgN() }, 10000)
+    loadTk(); loadMsgN(); loadFbN()
+    const t = setInterval(() => { loadTk(); loadMsgN(); loadFbN() }, 10000)
     return () => clearInterval(t)
-  }, [allowed, loadTk, loadMsgN])
+  }, [allowed, loadTk, loadMsgN, loadFbN])
   useEffect(() => { if (allowed) loadMsgN() }, [tab, allowed, loadMsgN])
   // Phone menu: the sidebar becomes a drawer that slides in from the left.
   const [range, setRange] = useState(6) // months shown on the Dashboard
@@ -1543,7 +1665,7 @@ export default function Admin() {
           <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19" /></svg>
         </button>
         <Link className="pnl-brand" to="/"><img src="/assets/kali-logo-white.svg" alt="" width="18" height="18" /><span>Shellwise <em>admin</em></span></Link>
-        <nav aria-label="Admin sections">{TABS.map(([v, t]) => <button key={v} className={tab === v ? 'on' : ''} onClick={() => { setTab(v); setMenu(false) }}><span className="pnl-nl">{v === 'messages' && msgN > 0 ? <span style={{ display: 'inline-flex', color: '#ffb454', animation: 'pnlmb 1.1s ease-in-out infinite' }} title={msgN + ' new message' + (msgN > 1 ? 's' : '')}>{ICON[v]}</span> : ICON[v]}{t}</span>{v === 'overview' && ov ? <i>{ov.online} online</i> : v === 'tickets' && tkN > 0 ? <i className="pnl-tkn">{tkN}</i> : v === 'messages' && msgN > 0 ? <i className="pnl-tkn">{msgN}</i> : null}</button>)}<style>{'@keyframes pnlmb{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.25;transform:scale(1.18)}}'}</style></nav>
+        <nav aria-label="Admin sections">{TABS.map(([v, t]) => <button key={v} className={tab === v ? 'on' : ''} onClick={() => { setTab(v); setMenu(false) }}><span className="pnl-nl">{(v === 'messages' && msgN > 0) || (v === 'feedback' && fbN > 0) ? <span style={{ display: 'inline-flex', color: '#ffb454', animation: 'pnlmb 1.1s ease-in-out infinite' }} title={(v === 'feedback' ? fbN + ' new feedback' : msgN + ' new message' + (msgN > 1 ? 's' : ''))}>{ICON[v]}</span> : ICON[v]}{t}</span>{v === 'overview' && ov ? <i>{ov.online} online</i> : v === 'tickets' && tkN > 0 ? <i className="pnl-tkn">{tkN}</i> : v === 'messages' && msgN > 0 ? <i className="pnl-tkn">{msgN}</i> : v === 'feedback' && fbN > 0 ? <i className="pnl-tkn">{fbN}</i> : null}</button>)}<style>{'@keyframes pnlmb{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.25;transform:scale(1.18)}}'}</style></nav>
         <Link className="pnl-out" to="/lab">{ICON.lab}Open the lab</Link>
         <div className="pnl-me">
           <span className="pnl-av">{user.avatar ? <img src={user.avatar} alt="" /> : (user.user || '?').slice(0, 1).toUpperCase()}</span>
@@ -1571,11 +1693,12 @@ export default function Admin() {
             {wide && <MobileUser user={user} signOut={signOut} />}
           </div>
         </header>
-        {tab === 'overview' && <Overview data={ov} err={ovErr} range={range} />}
+        {tab === 'overview' && <Overview data={ov} err={ovErr} range={range} hidden={hideM} onHide={toggleHide} />}
         {tab === 'users' && <Users me={user.id} />}
-        {tab === 'payments' && <Payments />}
+        {tab === 'payments' && <Payments hidden={hideM} onHide={toggleHide} />}
         {tab === 'subscriptions' && <Subscriptions />}
         {tab === 'messages' && <Messages />}
+        {tab === 'feedback' && <Feedback onChange={loadFbN} />}
         {tab === 'tickets' && <Tickets onChange={loadTk} />}
         {tab === 'announcements' && <Announcements />}
         {tab === 'coupons' && <Coupons />}

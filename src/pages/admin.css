@@ -500,3 +500,4 @@ body:has(.pnl){background:#070c1b}
 .pnl-pophr{display:inline-flex;align-items:center;gap:6px}
 .pnl-pophd .pnl-popx{display:none;width:32px;height:32px;padding:0;align-items:center;justify-content:center;border:1px solid var(--ln);border-radius:9px;background:#ffffff0d;color:#fff;font-size:22px;line-height:1;cursor:pointer}
 @media (max-width:700px){.pnl-pophd .pnl-popx{display:inline-flex}.pnl-pophd{position:sticky;top:0;background:var(--pn);z-index:1}}
+.pnl-pill.mq-read{background:#ffffff14;color:var(--mut)}

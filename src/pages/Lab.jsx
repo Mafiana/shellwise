@@ -88,6 +88,22 @@ export default function Lab() {
             else load(true)
           }, () => reply({ error: 'Could not reach support.' }))
         }
+      } else if (a === 'feedback' || a === 'feedbackmy') {
+        const reply = (data) => { try { frame.contentWindow.postMessage({ shellwiseReply: 'feedback', data }, window.location.origin) } catch { /* frame gone */ } }
+        const me = uref.current
+        if (BACKEND !== 'supabase' || !me || me.guest) return reply({ error: 'Log in to send feedback.' })
+        if (a === 'feedbackmy') {
+          supabase.rpc('feedback_my').then(({ data, error }) => reply(error || !data ? { count: 0 } : data), () => reply({ count: 0 }))
+        } else {
+          const d = e.data.data || {}
+          const stars = Number.isInteger(d.stars) && d.stars >= 1 && d.stars <= 5 ? d.stars : null
+          const kind = ['feedback', 'feature', 'bug'].includes(d.kind) ? d.kind : 'feedback'
+          const message = String(d.message || '').trim().slice(0, 1500)
+          supabase.rpc('feedback_send', { p_stars: stars, p_kind: kind, p_message: message }).then(({ error }) => {
+            if (error) reply({ error: /slow down/.test(error.message) ? 'You have sent a lot today. Please try again tomorrow.' : 'Could not send. Please try again.' })
+            else reply({ ok: true })
+          }, () => reply({ error: 'Could not reach the server.' }))
+        }
       } else if (a === 'delete') {
         const reply = (m) => { try { frame.contentWindow.postMessage({ shellwiseReply: 'delete-failed', message: m }, window.location.origin) } catch { /* frame gone */ } }
         deleteAccount().then(() => nav('/', { state: { deleted: true } }), (x) => reply(x.message || 'Could not delete your account.'))
