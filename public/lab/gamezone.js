@@ -434,6 +434,58 @@
       }
       return;
     }
+    // Copy invite link
+    const inv = e.target.closest && e.target.closest('[data-gz-copy]');
+    if (inv) {
+      e.preventDefault();
+      e.stopPropagation();
+      const text = inv.getAttribute('data-gz-copy') || '';
+      const done = function () {
+        const prev = inv.getAttribute('data-label') || inv.textContent;
+        if (!inv.getAttribute('data-label')) inv.setAttribute('data-label', prev);
+        inv.textContent = 'Copied!';
+        inv.classList.add('gz-inv-copied');
+        inv.disabled = true;
+        setTimeout(function () {
+          inv.textContent = inv.getAttribute('data-label') || 'Copy invite link';
+          inv.classList.remove('gz-inv-copied');
+          inv.disabled = false;
+        }, 2000);
+        if (typeof toast === 'function') toast('Invite link copied');
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () {
+          try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            done();
+          } catch (err) {
+            if (typeof toast === 'function') toast('Could not copy — select the link manually');
+          }
+        });
+      } else {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          done();
+        } catch (err) {
+          if (typeof toast === 'function') toast('Could not copy — select the link manually');
+        }
+      }
+      return;
+    }
     if (!e.target.closest || !e.target.closest('.gz-profile-wrap')) {
       const drop = document.getElementById('gz-drop');
       const pbtn = document.getElementById('gz-profile-btn');

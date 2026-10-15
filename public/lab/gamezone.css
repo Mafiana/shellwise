@@ -247,8 +247,45 @@
 .gz-trophy{margin:12px 0 0;color:#ffb454;font-weight:700}
 @media(max-width:700px){
   .gz-hero{flex-direction:column;align-items:stretch}
-  .gz-profile-wrap{align-self:flex-end}
-  .gz-drop{right:0;left:auto}
+  .gz-profile-wrap{align-self:stretch;width:100%}
+  .gz-profile-btn{width:100%;justify-content:flex-start}
+  .gz-drop{
+    position:fixed;
+    left:12px;
+    right:12px;
+    top:auto;
+    bottom:max(12px, env(safe-area-inset-bottom));
+    width:auto;
+    max-width:none;
+    max-height:min(72vh, 560px);
+    max-height:min(72dvh, 560px);
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    z-index:10040;
+    box-shadow:0 20px 50px #000c, 0 0 0 1px #00f0a833;
+  }
+}
+@media(max-width:420px){
+  .gz-drop{
+    left:8px;
+    right:8px;
+    bottom:max(8px, env(safe-area-inset-bottom));
+    max-height:min(68vh, 520px);
+    max-height:min(68dvh, 520px);
+    padding:10px;
+    border-radius:12px;
+  }
+  .gz-drop h4{font-size:11px}
+  .gz-lb-list li{grid-template-columns:24px 1fr auto;gap:6px;font-size:11px}
+  .gz-lb-game{display:none}
+  .gz-ach-compact .gz-ach-item,.gz-ach-item{font-size:11px;padding:6px 8px}
+  .gz-invite-code code{font-size:12px;word-break:break-all}
+}
+.gz-inv-copied{
+  background:#00f0a8 !important;
+  color:#041018 !important;
+  border-color:#00f0a8 !important;
+  font-weight:700;
 }
 
   width:88px;height:88px;border-radius:50%;
