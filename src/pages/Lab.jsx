@@ -113,6 +113,31 @@ export default function Lab() {
     return () => window.removeEventListener('message', on)
   }, [nav, signOut, setAvatar, saveProfile, deleteAccount, changePassword])
 
+  // Open support chat when arriving from suspension modal
+  useEffect(() => {
+    if (!synced || !user || user.guest) return
+    let openSupport = false
+    try {
+      openSupport = sessionStorage.getItem('sw_open_support') === '1' || localStorage.getItem('sw_open_support') === '1'
+      if (openSupport) {
+        sessionStorage.removeItem('sw_open_support')
+        localStorage.removeItem('sw_open_support')
+      }
+    } catch { /* ignore */ }
+    if (!openSupport) return
+    const kick = () => {
+      try {
+        const frame = document.getElementById('lab-frame')
+        if (frame && frame.contentWindow && typeof frame.contentWindow.go === 'function') {
+          frame.contentWindow.go('support')
+        }
+      } catch { /* ignore */ }
+    }
+    const t1 = setTimeout(kick, 600)
+    const t2 = setTimeout(kick, 1800)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [synced, user?.id, user?.guest])
+
   if (!ready || !user || user.guest || !synced) return <div className="lab-wait" role="status">Loading</div>
   return <iframe id="lab-frame" className="lab-frame" title="Shellwise lab" src="/lab/index.html?app" onLoad={() => setTimeout(() => window.dispatchEvent(new Event('sw-lab-ready')), 250)} />
 }

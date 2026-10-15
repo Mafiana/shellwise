@@ -208,5 +208,5 @@ C.ctf=()=>{
   qs:[{p:'Flag 1: find the hidden file in ~/ctf',fmt:'flag{...}',h:'Hidden files start with a dot. Try: ls -a ~/ctf',ok:v=>v==f1},
       {p:'Flag 2: decode ~/ctf/encoded.txt',fmt:'flag{...}',h:'It is Base64. Try: base64 -d ~/ctf/encoded.txt',ok:v=>v==f2},
       {p:'Flag 3: find the secret inside ~/ctf/server.log',fmt:'flag{...}',h:'Try: grep secret ~/ctf/server.log',ok:v=>v==f3}]})};
-window.GH={shell,stat,finish,alive,again,sprint,shuf,pick,mark,GL};
-})();
+window.startMission=startMission;
+window.GH={shell,stat,finish,alive,again,sprint,shuf,pick,mark,GL};})();

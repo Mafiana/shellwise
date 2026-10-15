@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './lib/AuthContext.jsx'
 import { EnterProvider } from './components/EnterOverlay.jsx'
 import SiteShell from './components/SiteShell.jsx'
+import SuspendedGuard from './components/SuspendedGuard.jsx'
 import Home from './pages/Home.jsx'
 import About from './pages/About.jsx'
 import Legal from './pages/Legal.jsx'
@@ -13,6 +14,7 @@ import BillingCallback from './pages/BillingCallback.jsx'
 export default function App() {
   return (
     <AuthProvider>
+      <SuspendedGuard />
       <EnterProvider>
         <Routes>
           <Route element={<SiteShell />}>

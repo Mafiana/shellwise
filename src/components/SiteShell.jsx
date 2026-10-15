@@ -25,10 +25,11 @@ export default function SiteShell() {
   }, [nav, scrollNow])
 
   useEffect(() => {
-    const sc = loc.state && loc.state.sc
-    if (sc) setTimeout(() => scrollNow(sc), 60)
+    const fromHash = (typeof window !== 'undefined' && window.location.hash || '').replace(/^#/, '')
+    const sc = (loc.state && loc.state.sc) || fromHash
+    if (sc) setTimeout(() => scrollNow(sc), 80)
     else rootRef.current && rootRef.current.scrollTo({ top: 0, behavior: 'auto' })
-  }, [loc.pathname, loc.key, loc.state, scrollNow])
+  }, [loc.pathname, loc.key, loc.state, loc.hash, scrollNow])
 
    const [note, setNote] = useState(false)
   useEffect(() => {

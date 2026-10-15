@@ -52,9 +52,19 @@ async function loadProfile(session) {
     if (c && c.email && c.email === (u.email || '') && !c.guest) return { ...c, id: u.id, isAdmin: false }
     throw new Error('offline')
   }
-  if (data?.suspended) { await supabase.auth.signOut(); throw new Error('This account has been suspended. Contact support if you think this is a mistake.') }
+  // Soft-flag suspension so SuspendedGuard can show a modal (login still blocked in signIn)
+  if (data?.suspended) {
+    return {
+      guest: false, id: u.id, isAdmin: !!data?.is_admin, suspended: true,
+      location: data?.location || '', bio: data?.bio || '', gender: data?.gender || '', email: u.email || '',
+      name: data?.full_name || u.user_metadata?.full_name || '',
+      user: data?.username || u.user_metadata?.username || (u.email || 'learner').split('@')[0],
+      avatar: AV.test(data?.avatar || '') ? data.avatar : '', plan: data?.plan || 'free',
+      since: new Date(data?.created_at || u.created_at || Date.now()).getTime(),
+    }
+  }
   return {
-    guest: false, id: u.id, isAdmin: !!data?.is_admin, location: data?.location || '', bio: data?.bio || '', gender: data?.gender || '', email: u.email || '',
+    guest: false, id: u.id, isAdmin: !!data?.is_admin, suspended: false, location: data?.location || '', bio: data?.bio || '', gender: data?.gender || '', email: u.email || '',
     name: data?.full_name || u.user_metadata?.full_name || '',
     user: data?.username || u.user_metadata?.username || (u.email || 'learner').split('@')[0],
     avatar: AV.test(data?.avatar || '') ? data.avatar : '', plan: data?.plan || 'free', since: new Date(data?.created_at || u.created_at || Date.now()).getTime(),
@@ -103,10 +113,10 @@ export function AuthProvider({ children }) {
       try {
         await supabase.rpc('expire_plans')
         const { data } = await supabase.from('profiles').select('plan, suspended').eq('id', user.id).maybeSingle()
-        if (data?.suspended) { await supabase.auth.signOut(); setUser(null); return }
+        if (data?.suspended) { setUser((cur) => (cur && cur.id === user.id ? { ...cur, suspended: true } : cur)); return }
         if (data?.plan) setUser((cur) => (cur && cur.id === user.id && cur.plan !== data.plan ? { ...cur, plan: data.plan } : cur))
       } catch { /* ignore */ }
-    }, 300000)
+    }, 30000)
     return () => { clearInterval(t); clearInterval(pl); document.removeEventListener('visibilitychange', ping) }
   }, [user?.id, user?.guest])
 
@@ -142,10 +152,22 @@ export function AuthProvider({ children }) {
   }, [])
 
   const signIn = useCallback(async ({ email, password }) => {
-    if (BACKEND === 'local') { const r = await local.signIn({ email, password }); const lu = withAv(r.user); setUser(lu); return { user: lu } }
+    if (BACKEND === 'local') {
+      const r = await local.signIn({ email, password })
+      const lu = withAv(r.user)
+      if (lu.suspended) throw new Error('This account has been suspended. Contact support if you think this is a mistake.')
+      setUser(lu)
+      return { user: lu }
+    }
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw new Error(friendly(error.message))
-    return { user: await loadProfile(data.session) }
+    const lu = await loadProfile(data.session)
+    if (lu.suspended) {
+      try { await supabase.auth.signOut() } catch { /* ignore */ }
+      throw new Error('This account has been suspended. Contact support if you think this is a mistake.')
+    }
+    setUser(lu)
+    return { user: lu }
   }, [])
 
   // "Continue with Google". Supabase sends the person to Google, Google sends them back here, and the session starts.

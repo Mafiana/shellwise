@@ -49,7 +49,7 @@ function useLive(load, ms = 15000, first = true) {
     return () => { clearInterval(t); document.removeEventListener('visibilitychange', tick); window.removeEventListener('focus', tick) }
   }, [load, ms, first])
 }
-const TABS = [['overview', 'Dashboard'], ['users', 'Users'], ['payments', 'Payments'], ['subscriptions', 'Subscriptions'], ['messages', 'Messages'], ['feedback', 'Feedback'], ['tickets', 'Tickets'], ['announcements', 'Announcements'], ['coupons', 'Coupons'], ['audit', 'Audit log']]
+const TABS = [['overview', 'Dashboard'], ['users', 'Users'], ['payments', 'Payments'], ['subscriptions', 'Subscriptions'], ['messages', 'Messages'], ['feedback', 'Feedback'], ['tickets', 'Tickets'], ['announcements', 'Announcements'], ['coupons', 'Coupons'], ['gamezone', 'Game Zone'], ['audit', 'Audit log']]
 const svg = (d) => <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>
 const ICON = {
   overview: svg(<><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v9.5h13V10" /><path d="M10 19.5v-5h4v5" /></>),
@@ -62,6 +62,7 @@ const ICON = {
   announcements: svg(<><path d="m3 11 15-6v14L3 13z" /><path d="M7 13.5V18a2 2 0 0 0 2 2h1" /><path d="M21 9v6" /></>),
   coupons: svg(<><path d="M3 9a2 2 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a2 2 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z" /><path d="M14 5v14" strokeDasharray="2 3" /></>),
   audit: svg(<><path d="M12 3 4 6v6c0 4.5 3.2 8 8 9 4.8-1 8-4.5 8-9V6z" /><path d="m9 12 2 2 4-4" /></>),
+  gamezone: svg(<><path d="M8 14v-2m0 0V9m0 3h2m6 2v-2m0 0V9m0 3h-2" /><path d="M6.5 6h11A3.5 3.5 0 0 1 21 9.5v5a3.5 3.5 0 0 1-3.5 3.5h-11A3.5 3.5 0 0 1 3 14.5v-5A3.5 3.5 0 0 1 6.5 6z" /></>),
   lab: svg(<><rect x="2.5" y="4" width="19" height="16" rx="2.5" /><path d="m7 9 3 3-3 3" /><path d="M13 15h4" /></>),
 }
 const PLAN_COL = { free: '#2fd37a', learner: '#2f8cff', pro: '#ffb454' }
@@ -303,7 +304,7 @@ function UserDrawer({ id, me, onClose, onChanged }) {
             {locked ? <p className="pnl-dim">{u.id === me ? 'This is your own account.' : 'Admin accounts cannot be suspended or deleted here.'}</p> : (
               <>
                 <div className="pnl-acts l"><button className="pnl-btn" disabled={busy} onClick={() => setPwOpen(true)}>Reset password</button>
-                <button className={`pnl-btn${u.suspended ? '' : ' warn'}`} disabled={busy} onClick={() => act({ action: 'set_suspended', suspended: !u.suspended }, suspendAsk(u))}>{u.suspended ? 'Restore account' : 'Suspend account'}</button></div>
+                <button className={`pnl-btn${u.suspended ? ' restore-red' : ' warn'}`} disabled={busy} onClick={() => act({ action: 'set_suspended', suspended: !u.suspended }, suspendAsk(u))}>{u.suspended ? 'Restore account' : 'Suspend account'}</button></div>
                 <div className="pnl-danger">
                   <p>Delete this account for good, with its payments record and messages. This cannot be undone. Type <b>{u.username}</b> to confirm.</p>
                   <div>
@@ -1578,6 +1579,101 @@ function MobileUser({ user, signOut }) {
   )
 }
 
+
+// ---- Pro Game Zone leaderboard (needs supabase/upgrade-gamezone.sql) ----
+const GZ_NAMES = {
+  secrethunter: 'Secret Hunter', cyberattack: 'Cyber Attack', speedrun: 'Speed Run',
+  vault: 'Terminal Vault', detective: 'Detective', rescue1: 'RESCUE 01',
+  rescue2: 'RESCUE 02', rescue3: 'RESCUE 03', rescue4: 'RESCUE 04', hunt: 'Secret Hunter',
+}
+function GameZoneAdmin() {
+  const [feed, setFeed] = useState(null)
+  const [board, setBoard] = useState(null)
+  const [stats, setStats] = useState(null)
+  const [err, setErr] = useState('')
+  const [game, setGame] = useState('all')
+  const [q, setQ] = useState('')
+  const load = useCallback(async () => {
+    setErr('')
+    const [f, b, s] = await Promise.all([
+      supabase.rpc('gamezone_admin_feed'),
+      supabase.rpc('gamezone_leaderboard', { p_game: game === 'all' ? null : game }),
+      supabase.rpc('gamezone_admin_stats').then((r) => r, () => ({ data: null, error: true })),
+    ])
+    if (f.error) {
+      setErr('Could not load Game Zone. Run supabase/upgrade-gamezone.sql in the SQL Editor, then refresh.')
+      setFeed([])
+    } else setFeed(Array.isArray(f.data) ? f.data : [])
+    setBoard(!b.error && Array.isArray(b.data) ? b.data : [])
+    setStats(s && !s.error && s.data ? s.data : null)
+  }, [game])
+  useLive(load, 20000)
+  const filtered = (feed || []).filter((e) => {
+    if (!q.trim()) return true
+    const s = q.trim().toLowerCase()
+    return String(e.username || '').toLowerCase().includes(s)
+      || String(e.game_id || '').toLowerCase().includes(s)
+      || String(e.event || '').toLowerCase().includes(s)
+  })
+  if (err) return <p className="pnl-err">{err}</p>
+  if (!feed) return <p className="pnl-dim">Loading Game Zone…</p>
+  const top = board && board[0]
+  return (
+    <>
+      <p className="pnl-dim pnl-sum">Highest scores and live plays from Pro Game Zone. Scores appear when a signed-in learner finishes a mission.</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: 12, marginBottom: 16 }}>
+        <Stat label="Plays (24h)" value={stats?.plays_24h ?? '—'} />
+        <Stat label="Clears (24h)" value={stats?.completes_24h ?? '—'} />
+        <Stat label="On board" value={stats?.unique_players ?? (board ? board.length : '—')} />
+        <Stat label="Top player" value={top ? '@' + top.username : '—'} sub={top ? String(top.best_score) : undefined} />
+      </div>
+      <h3 style={{ margin: '8px 0' }}>Leaderboard</h3>
+      <div className="pnl-chips" role="group" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+        {[['all', 'All'], ['secrethunter', 'Hunter'], ['cyberattack', 'Attack'], ['speedrun', 'Speed'], ['vault', 'Vault'], ['detective', 'Detective'], ['rescue1', 'RESCUE 01'], ['rescue2', 'RESCUE 02'], ['rescue3', 'RESCUE 03'], ['rescue4', 'RESCUE 04']].map(([v, t]) => (
+          <button key={v} type="button" className={game === v ? 'on' : ''} onClick={() => setGame(v)}>{t}</button>
+        ))}
+      </div>
+      {!board || !board.length ? <p className="pnl-dim">No scores yet.</p> : (
+        <div className="pnl-tw"><table className="pnl-tbl">
+          <thead><tr><th>#</th><th>Player</th><th>Game</th><th>Best</th><th>Clears</th><th>Plan</th><th>Updated</th></tr></thead>
+          <tbody>
+            {board.map((r, i) => (
+              <tr key={(r.game_id || '') + (r.username || '') + i}>
+                <td>{i === 0 ? '🏆' : i + 1}</td>
+                <td><b>@{r.username}</b></td>
+                <td>{GZ_NAMES[r.game_id] || r.game_id}</td>
+                <td><b>{r.best_score}</b></td>
+                <td>{r.clears}</td>
+                <td>{r.plan || '—'}</td>
+                <td className="mut">{r.updated_at ? day(r.updated_at) : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table></div>
+      )}
+      <h3 style={{ margin: '20px 0 8px' }}>Live activity</h3>
+      <input className="pnl-q" placeholder="Filter by user, game, event…" value={q} onChange={(e) => setQ(e.target.value)} style={{ marginBottom: 10, maxWidth: 320 }} />
+      {!filtered.length ? <p className="pnl-dim">No events match.</p> : (
+        <div className="pnl-tw"><table className="pnl-tbl">
+          <thead><tr><th>When</th><th>User</th><th>Game</th><th>Event</th><th>Score</th><th>Plan</th></tr></thead>
+          <tbody>
+            {filtered.slice(0, 80).map((e) => (
+              <tr key={e.id || String(e.created_at) + e.username}>
+                <td className="nw">{e.created_at ? day(e.created_at) : '—'}<small>{e.created_at ? ago(e.created_at) : ''}</small></td>
+                <td>@{e.username}</td>
+                <td>{GZ_NAMES[e.game_id] || e.game_id}</td>
+                <td>{e.event === 'complete' ? 'Clear' : e.event === 'start' ? 'Start' : e.event}</td>
+                <td>{e.score ?? '—'}</td>
+                <td>{e.plan || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table></div>
+      )}
+    </>
+  )
+}
+
 export default function Admin() {
   const { user, ready, signOut } = useAuth()
   const [tab, setTab] = useState('overview')
@@ -1648,7 +1744,7 @@ export default function Admin() {
     f(); m.addEventListener('change', f)
     return () => m.removeEventListener('change', f)
   }, [])
-  const title = useMemo(() => TABS.find((t) => t[0] === tab)[1], [tab])
+  const title = useMemo(() => (TABS.find((t) => t[0] === tab) || ['', 'Admin'])[1], [tab])
 
   if (BACKEND !== 'supabase') return <main className="pnl-gate"><h1>Admin panel</h1><p>The admin panel needs the real backend. Connect Supabase (see the README), run <code>supabase/admin.sql</code>, then open this page again.</p><Link to="/">Back to the site</Link></main>
   if (!ready) return <AdLoader />
@@ -1700,6 +1796,7 @@ export default function Admin() {
         {tab === 'tickets' && <Tickets onChange={loadTk} />}
         {tab === 'announcements' && <Announcements />}
         {tab === 'coupons' && <Coupons />}
+        {tab === 'gamezone' && <GameZoneAdmin />}
         {tab === 'audit' && <Audit />}
       </main>
     </div>

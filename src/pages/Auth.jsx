@@ -118,6 +118,31 @@ function ForgotModal({ start, onClose }) {
   )
 }
 
+
+function SuspendedLoginModal({ onClose, onChat }) {
+  const S = {
+    ov: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', minHeight: '100dvh', zIndex: 2147483000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, boxSizing: 'border-box', background: 'rgba(4,8,18,.88)', overflowY: 'auto' },
+    box: { width: '100%', maxWidth: 400, margin: 'auto', borderRadius: 18, padding: '26px 22px 22px', border: '1px solid #ff6b7a55', background: 'linear-gradient(165deg,#1a0e14,#0b1220)', boxShadow: '0 28px 70px #000c', color: '#e8eefc', fontFamily: 'Inter,system-ui,sans-serif', textAlign: 'center' },
+    h: { margin: '0 0 10px', fontSize: 20, fontWeight: 800, color: '#ff8a96' },
+    p: { margin: '0 0 18px', color: '#a8b6d4', fontSize: 14.5, lineHeight: 1.55 },
+    row: { display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' },
+    ghost: { flex: 1, minWidth: 120, padding: '12px 14px', borderRadius: 11, cursor: 'pointer', border: '1px solid #ffffff28', background: '#ffffff12', color: '#e8eefc', fontWeight: 700, fontSize: 14 },
+    pri: { flex: 1, minWidth: 120, padding: '12px 14px', borderRadius: 11, cursor: 'pointer', border: 0, background: 'linear-gradient(135deg,#ff6b7a,#c62839)', color: '#fff', fontWeight: 700, fontSize: 14 },
+  }
+  return (
+    <div style={S.ov} role="alertdialog" aria-modal="true" aria-labelledby="sus-login-h">
+      <div style={S.box}>
+        <h2 id="sus-login-h" style={S.h}>Account suspended</h2>
+        <p style={S.p}>This account has been suspended. Contact an admin for help, or close this message.</p>
+        <div style={S.row}>
+          <button type="button" style={S.ghost} onClick={onClose}>Close</button>
+          <button type="button" style={S.pri} onClick={onChat}>Chat with admin</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Auth() {
   const [q] = useSearchParams()
   const nav = useNavigate()
@@ -142,6 +167,7 @@ export default function Auth() {
   const [waited, setWaited] = useState(false)
   const [okMsg, setOkMsg] = useState('')
   const [fpOpen, setFpOpen] = useState(false)
+  const [susLogin, setSusLogin] = useState(false)
   const [code, setCode] = useState('')
   const [cool, setCool] = useState(0)
   const [uAvail, setUAvail] = useState(null) // null unknown, 'checking', true free, false taken
@@ -200,7 +226,7 @@ export default function Auth() {
   const bad = (m) => { setErr(m); const n = errRef.current; if (n) { n.classList.remove('shake'); void n.offsetWidth; n.classList.add('shake') } }
 
   const sub = signup
-    ? (!planId ? 'Pick a plan, then create your account. You can start free and upgrade any time.' : plan.price ? `You chose ${plan.name}.${PAYMENTS_ENABLED ? ' You will pay securely with Paystack after you create your account.' : ' No payment is taken yet.'}` : 'Save your progress and pick up where you left off.')
+    ? (!planId ? 'Pick a plan, choose a username, then continue with Google.' : plan.price ? `You chose ${plan.name}.${PAYMENTS_ENABLED ? ' You will pay securely with Paystack after you create your account.' : ' No payment is taken yet.'}` : 'Save your progress and pick up where you left off.')
     : 'Log in to pick up where you left off.'
 
   const forgot = async () => {
@@ -236,6 +262,11 @@ export default function Auth() {
   const submit = async (e) => {
     e.preventDefault()
     setErr(''); setInfo('')
+    // Sign-up is Google-only: username + optional referral, then OAuth
+    if (signup) {
+      await google()
+      return
+    }
     const name = f.name.trim().slice(0, 60), username = f.user.trim().toLowerCase(), email = f.email.trim().toLowerCase(), password = f.pw.slice(0, 128)
     if (!signup && lockLeft()) { setLock(lockLeft()); return }
     setOkMsg('')
@@ -260,7 +291,13 @@ export default function Auth() {
       }
     } catch (x) {
       if (!signup && lockLeft()) setLock(lockLeft())
-      bad(x.message || 'Something went wrong. Please try again.')
+      const msg = x && x.message ? String(x.message) : ''
+      if (!signup && /suspended/i.test(msg)) {
+        setSusLogin(true)
+        setErr('')
+      } else {
+        bad(msg || 'Something went wrong. Please try again.')
+      }
     } finally { setBusy(false) }
   }
 
@@ -342,15 +379,18 @@ export default function Auth() {
                   <b>{p.name}</b><small>{p.price ? priceLine(p, bp) : '15-min trial'}</small>
                 </button>))}</div>
             </div>}
-            {signup && <>
-              <label className="f-name"><span>Full name</span><input name="name" value={f.name} onChange={set('name')} autoComplete="name" placeholder="Your name" maxLength={60} /></label>
-              <label className="f-name"><span>Username</span><input name="user" value={f.user} onChange={set('user')} autoComplete="username" placeholder="for example, rootkit_rita" maxLength={20} spellCheck="false" autoCapitalize="none" /><small className="hint">3 to 20 letters, numbers or underscores. This is what shows on your profile.</small>{uAvail === 'checking' && <small className="hint">Checking...</small>}{uAvail === true && <small className="hint u-ok">✔ @{f.user.trim().toLowerCase()} is available</small>}{uAvail === false && <small className="hint u-bad">✖ That username is taken. Try another one.</small>}</label>
-            </>}
-            <label><span>Email</span><input name="email" type="email" value={f.email} onChange={set('email')} autoComplete="email" placeholder="you@example.com" maxLength={254} required /></label>
-            <label><span>Password</span><div className="pw"><input name="pw" type={show ? 'text' : 'password'} value={f.pw} onChange={set('pw')} autoComplete={signup ? 'new-password' : 'current-password'} placeholder="At least 8 characters" maxLength={128} required />
-              <button type="button" className={show ? 'on' : ''} onClick={() => setShow((v) => !v)} aria-label={show ? 'Hide password' : 'Show password'}><EyeIcon /></button></div></label>
-            {signup && <div className="meter f-name" aria-hidden="true" data-s={s}><i /><i /><i /><i /></div>}
-            {signup && <label className="f-name"><span>Referral code <em>(optional)</em></span><input name="ref" value={f.ref} onChange={(e) => setF((v) => ({ ...v, ref: cleanRef(e.target.value) }))} placeholder="A friend's code" maxLength={12} autoComplete="off" spellCheck="false" />{f.ref && <small className="hint">If the code is valid, your first paid plan gets a discount.</small>}</label>}
+            {signup ? (
+              <>
+                <label className="f-name"><span>Username</span><input name="user" value={f.user} onChange={set('user')} autoComplete="username" placeholder="for example, rootkit_rita" maxLength={20} spellCheck="false" autoCapitalize="none" /><small className="hint">3 to 20 letters, numbers or underscores. This is what shows on your profile.</small>{uAvail === 'checking' && <small className="hint">Checking...</small>}{uAvail === true && <small className="hint u-ok">✔ @{f.user.trim().toLowerCase()} is available</small>}{uAvail === false && <small className="hint u-bad">✖ That username is taken. Try another one.</small>}</label>
+                <label className="f-name"><span>Referral code <em>(optional)</em></span><input name="ref" value={f.ref} onChange={(e) => setF((v) => ({ ...v, ref: cleanRef(e.target.value) }))} placeholder="A friend's code" maxLength={12} autoComplete="off" spellCheck="false" />{f.ref && <small className="hint">If the code is valid, your first paid plan gets a discount.</small>}</label>
+              </>
+            ) : (
+              <>
+                <label><span>Email</span><input name="email" type="email" value={f.email} onChange={set('email')} autoComplete="email" placeholder="you@example.com" maxLength={254} required /></label>
+                <label><span>Password</span><div className="pw"><input name="pw" type={show ? 'text' : 'password'} value={f.pw} onChange={set('pw')} autoComplete="current-password" placeholder="Your password" maxLength={128} required />
+                  <button type="button" className={show ? 'on' : ''} onClick={() => setShow((v) => !v)} aria-label={show ? 'Hide password' : 'Show password'}><EyeIcon /></button></div></label>
+              </>
+            )}
             <p className="au-err" ref={errRef} role="alert">{lock ? `Too many failed attempts. Try again in ${lock} s.` : err}</p>
             {info && <p className="au-info" role="status">{info}</p>}
             {okMsg && !signup && <p className="au-info" role="status">{okMsg}</p>}
@@ -359,11 +399,24 @@ export default function Auth() {
               <i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg></i>
               <span>By continuing you agree to the <Link className="lnk" to="/terms" target="_blank">Terms and Conditions</Link> and the <Link className="lnk" to="/privacy" target="_blank">Privacy Policy</Link>.</span>
             </label>}
-            <button className="plan-btn au-go" type="submit" disabled={busy || (!signup && !!lock)}><span>{busy ? 'Please wait' : signup ? 'Create account' : 'Log in'}</span><ArrowIcon /></button>
-            {BACKEND === 'supabase' && <>
-              <div className="au-or" aria-hidden="true"><span>or</span></div>
-              <button type="button" className="au-g" onClick={google} disabled={busy}><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" /><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" /><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" /><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" /></svg><span>Continue with Google</span></button>
-            </>}
+            {signup ? (
+              BACKEND === 'supabase' ? (
+                <button type="button" className="au-g plan-btn au-go" onClick={google} disabled={busy}>
+                  <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" /><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" /><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" /><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" /></svg>
+                  <span>{busy ? 'Please wait' : 'Continue with Google'}</span>
+                </button>
+              ) : (
+                <p className="au-err" role="alert">Google sign-up needs Supabase connected.</p>
+              )
+            ) : (
+              <>
+                <button className="plan-btn au-go" type="submit" disabled={busy || !!lock}><span>{busy ? 'Please wait' : 'Log in'}</span><ArrowIcon /></button>
+                {BACKEND === 'supabase' && <>
+                  <div className="au-or" aria-hidden="true"><span>or</span></div>
+                  <button type="button" className="au-g" onClick={google} disabled={busy}><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" /><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" /><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" /><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" /></svg><span>Continue with Google</span></button>
+                </>}
+              </>
+            )}
             <p className="au-sw">{signup
               ? <>Already have an account? <button type="button" onClick={() => setMode('login')}>Log in</button></>
               : <>New here? <button type="button" onClick={() => setMode('signup')}>Create an account</button> · <button type="button" onClick={() => setFpOpen(true)}>Forgot password?</button></>}</p>
@@ -372,6 +425,12 @@ export default function Auth() {
         </div>
       </div></div>
       {fpOpen && <ForgotModal start={f.email} onClose={() => setFpOpen(false)} />}
+      {susLogin && (
+        <SuspendedLoginModal
+          onClose={() => setSusLogin(false)}
+          onChat={() => { setSusLogin(false); try { window.location.assign(window.location.origin + '/#contact') } catch { window.location.href = '/#contact' } }}
+        />
+      )}
     </section>
   )
 }
