@@ -30,3 +30,30 @@ export const PLANS = [
 ]
 export const planById = (id) => PLANS.find((p) => p.id === id) || PLANS[0]
 
+
+
+// Live prices from Supabase public.plans (kobo → NGN). Fallback = static numbers above.
+export async function loadPlanPrices(supabase) {
+  if (!supabase) return PLANS
+  try {
+    const { data, error } = await supabase.from('plans').select('id,monthly_kobo,yearly_kobo')
+    if (error || !data) return PLANS
+    const map = Object.fromEntries(data.map((r) => [r.id, r]))
+    return PLANS.map((p) => {
+      const r = map[p.id]
+      if (!r) return p
+      const monthly = Math.round((+r.monthly_kobo || 0) / 100)
+      const yearly = Math.round((+r.yearly_kobo || 0) / 100)
+      // yearly field in UI is "per month when billed yearly"
+      const yearlyPerMonth = yearly > 0 ? Math.round(yearly / 12) : p.yearly
+      return {
+        ...p,
+        price: p.id === 'free' ? 0 : monthly,
+        yearly: p.id === 'free' ? 0 : yearlyPerMonth,
+        yearlyTotal: yearly,
+      }
+    })
+  } catch {
+    return PLANS
+  }
+}

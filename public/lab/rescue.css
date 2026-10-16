@@ -226,3 +226,36 @@
 .rc-ep.locked:hover{transform:none;border-color:#ffffff1a}
 .rc-lock{color:#ffb454;font-weight:700}
 .rc-ep.locked .rc-ep-go{cursor:not-allowed;opacity:.7}
+
+
+/* Mobile RESCUE: fixed map top half, terminal bottom */
+@media (max-width: 720px) {
+  .rc-layout, .rc-shell, #rescue-root, .rescue-wrap {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+  .rc-map, .rescue-map, #rc-map {
+    flex: 0 0 42% !important;
+    max-height: 42vh !important;
+    min-height: 140px !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+  .rc-term, .rc-term-body, .rescue-term {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: auto !important;
+    font-size: 12px !important;
+  }
+  .rc-term-body { max-height: none !important; }
+  .rc-map.rc-lock-pulse {
+    animation: rc-lock 0.55s ease;
+  }
+  @keyframes rc-lock {
+    0% { filter: brightness(1); box-shadow: inset 0 0 0 #00f0a800; }
+    40% { filter: brightness(1.35); box-shadow: inset 0 0 40px #00f0a866; }
+    100% { filter: brightness(1); box-shadow: inset 0 0 0 #00f0a800; }
+  }
+}

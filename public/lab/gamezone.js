@@ -210,8 +210,23 @@
   }
 
   function boardListHtml() {
-    const rows = (boardCache || []).slice(0, 10);
-    if (!boardCache) return '<p class="dim">Loading leaderboard…</p>';
+    let rows = (boardCache || []).slice(0, 10);
+    if (!boardCache) {
+      // fallback: local high scores until parent replies
+      try {
+        const hs = (window.S && S.hs) || {};
+        const u = loadUser();
+        const name = u ? (u.user || u.username || 'you') : 'you';
+        rows = Object.keys(hs).filter(function (k) {
+          return ['secrethunter','cyberattack','speedrun','vault','detective'].indexOf(k) >= 0;
+        }).map(function (k) {
+          return { username: name, game_id: k, best_score: hs[k], clears: 1 };
+        }).sort(function (a, b) { return (b.best_score || 0) - (a.best_score || 0); }).slice(0, 10);
+        if (!rows.length) return '<p class="dim">Loading leaderboard…</p>';
+      } catch (e) {
+        return '<p class="dim">Loading leaderboard…</p>';
+      }
+    }
     if (!rows.length) return '<p class="dim">No scores yet — finish a mission while signed in.</p>';
     const labels = {
       secrethunter: 'Hunter', cyberattack: 'Attack', speedrun: 'Speed',
@@ -331,8 +346,13 @@
   function wrapGo() {
     const prev = window.go;
     if (typeof prev !== 'function') return;
+    if (prev.__gzWrapped) return;
     window.go = function (v) {
       if (v === 'gamezone') {
+        if (typeof openGameZone === 'function') {
+          openGameZone();
+          return;
+        }
         ensure();
         const A = api();
         try {
@@ -347,7 +367,7 @@
           pv.style.display = 'block';
           pv.innerHTML = A && typeof A.gamezone === 'function'
             ? A.gamezone()
-            : '<p style="padding:24px;color:#ff7d97">Game Zone failed to register.</p>';
+            : '<p style="padding:24px;color:#ff7d97">Game Zone loading…</p>';
           pv.scrollTop = 0;
         }
         return;
@@ -355,26 +375,17 @@
       if (v === 'rescue') {
         try {
           document.querySelectorAll('#side button[data-v]').forEach(function (b) {
-            b.classList.toggle('on', b.dataset.v === v);
+            b.classList.toggle('on', false);
           });
         } catch (e) {}
-        const term = document.getElementById('term');
-        const pv = document.getElementById('pv');
-        if (term) term.style.display = 'none';
-        if (pv) {
-          pv.style.display = 'block';
-          const A = api();
-          if (A && typeof A.rescue === 'function') {
-            pv.innerHTML = A.rescue();
-          } else {
-            pv.innerHTML = '<p style="padding:24px;color:#ff7d97">RESCUE not loaded. Add rescue.js before gamezone.js or after it, still near the end of body.</p>';
-          }
-          pv.scrollTop = 0;
+        if (typeof window.startRescue === 'function') {
+          window.startRescue();
+          return;
         }
-        return;
       }
       return prev.apply(this, arguments);
     };
+    window.go.__gzWrapped = true;
   }
 
   window.gzPlay = function (id) {
@@ -427,6 +438,27 @@
         drop.removeAttribute('hidden');
         pbtn.setAttribute('aria-expanded', 'true');
         requestBoard();
+        // Refresh progress + achievements live from current S.hs
+        try {
+          const prog = zoneProgress();
+          const pct = Math.round((prog.done / prog.total) * 100);
+          const bar = drop.querySelector('.gz-prog-bar i');
+          if (bar) bar.style.width = pct + '%';
+          const progP = drop.querySelector('.gz-drop-sec p.dim');
+          if (progP && progP.textContent.indexOf('missions') >= 0) {
+            progP.textContent = prog.done + ' / ' + prog.total + ' missions cleared · ' + pct + '%';
+          }
+          const ach = drop.querySelector('.gz-ach-compact') || drop.querySelector('.gz-drop-sec:nth-child(3)');
+          // rebuild achievements block if present
+          const secs = drop.querySelectorAll('.gz-drop-sec');
+          if (secs.length >= 3) {
+            // achievements is usually last or second-to-last before invite
+          }
+        } catch (err) {}
+        const lb = document.getElementById('gz-lb-body');
+        if (lb) lb.innerHTML = boardListHtml();
+        const w = document.getElementById('gz-week-body');
+        if (w) w.innerHTML = weekBoardHtml();
       } else {
         drop.setAttribute('hidden', '');
         pbtn.setAttribute('aria-expanded', 'false');
@@ -514,5 +546,87 @@
   wrapGo();
   setTimeout(function () { ensure(); wrapGo(); }, 0);
   setTimeout(function () { ensure(); wrapGo(); }, 200);
+  
+  // Reliable open for Pro Game Zone (mobile + desktop first tap)
+  function openGameZone(e) {
+    if (e) {
+      try { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); } catch (err) {}
+    }
+    ensure();
+    var A = api();
+    try {
+      document.querySelectorAll('#side button[data-v]').forEach(function (b) {
+        b.classList.toggle('on', b.dataset.v === 'gamezone');
+      });
+    } catch (err) {}
+    var term = document.getElementById('term');
+    var pv = document.getElementById('pv');
+    if (term) term.style.display = 'none';
+    if (pv) {
+      pv.style.display = 'block';
+      pv.innerHTML = A && typeof A.gamezone === 'function'
+        ? A.gamezone()
+        : '<p style="padding:24px;color:#ff7d97">Game Zone loading… try again.</p>';
+      pv.scrollTop = 0;
+    }
+    // if register was late, retry once
+    if (!A || typeof A.gamezone !== 'function') {
+      setTimeout(function () {
+        ensure();
+        A = api();
+        if (pv && A && typeof A.gamezone === 'function') {
+          pv.innerHTML = A.gamezone();
+        }
+      }, 50);
+    }
+  }
+
+  function bindGzNav() {
+    document.querySelectorAll('#side button[data-v="gamezone"]').forEach(function (btn) {
+      if (btn.dataset.gzBound === '2') return;
+      btn.dataset.gzBound = '2';
+      btn.onclick = function (e) { openGameZone(e); };
+      btn.addEventListener('touchend', function (e) { openGameZone(e); }, { passive: false });
+      btn.addEventListener('pointerup', function (e) {
+        if (e.pointerType === 'touch' || e.pointerType === 'pen') openGameZone(e);
+      }, { passive: false });
+    });
+  }
+
+  // Capture phase on sidebar so first tap always wins
+  function bindSideCapture() {
+    var side = document.getElementById('side');
+    if (!side || side.dataset.gzCap) return;
+    side.dataset.gzCap = '1';
+    side.addEventListener('click', function (e) {
+      var b = e.target && e.target.closest && e.target.closest('button[data-v="gamezone"]');
+      if (!b) return;
+      openGameZone(e);
+    }, true);
+  }
+
+  // Patch go early and keep re-patching
+  function wrapGo() {
+    var prev = window.go;
+    if (typeof prev !== 'function') return;
+    if (prev.__gzWrapped) return;
+    window.go = function (v) {
+      if (v === 'gamezone') {
+        openGameZone();
+        return;
+      }
+      return prev.apply(this, arguments);
+    };
+    window.go.__gzWrapped = true;
+  }
+
+  ensure();
+  wrapGo();
+  bindGzNav();
+  bindSideCapture();
+  setTimeout(function () { ensure(); wrapGo(); bindGzNav(); bindSideCapture(); }, 0);
+  setTimeout(function () { ensure(); wrapGo(); bindGzNav(); }, 200);
+  setTimeout(function () { ensure(); wrapGo(); bindGzNav(); }, 800);
+
   console.log('[gamezone] full hub ready');
 })();

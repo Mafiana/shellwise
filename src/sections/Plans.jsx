@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PLANS, CURRENCY } from '../data/plans.js'
+import { PLANS, CURRENCY, loadPlanPrices } from '../data/plans.js'
 import { useShell } from '../components/shell.jsx'
 import { CheckIcon, ArrowIcon } from '../components/Icon.jsx'
 import { money, monthlyPrice } from '../lib/money.js'
@@ -8,10 +8,14 @@ import { PAYMENTS_ENABLED } from '../lib/config.js'
 import { useAuth } from '../lib/AuthContext.jsx'
 import { startCheckout, getCoupon, setCoupon } from '../lib/pay.js'
 import { supabase } from '../lib/supabase.js'
+// live plan list from DB prices
 
 const CODE_RE = /^[A-Z0-9_-]{3,24}$/
 
 export default function Plans() {
+  const [planList, setPlanList] = useState(PLANS)
+  useEffect(() => { loadPlanPrices(supabase).then(setPlanList) }, [])
+
   const { bp, setBp } = useShell()
   const nav = useNavigate()
   const { user } = useAuth()
@@ -49,7 +53,7 @@ export default function Plans() {
         <button className={bp === 'y' ? 'on' : ''} onClick={() => setBp('y')}>Yearly <em>Save more</em></button>
       </div>
       <div className="plans">
-        {PLANS.map((p) => (
+        {planList.map((p) => (
           <article key={p.id} className={`plan reveal${p.pop ? ' pop' : ''}`} style={{ '--pc': p.col, '--pc2': p.col2 }}>
             {p.pop && <span className="ribbon">Most popular</span>}
             <h3>{p.name}</h3><p className="ptag">{p.tag}</p>

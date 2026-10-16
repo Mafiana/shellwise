@@ -104,6 +104,24 @@ export default function Lab() {
             else reply({ ok: true })
           }, () => reply({ error: 'Could not reach the server.' }))
         }
+      } else if (a === 'gamezone') {
+        const me = uref.current
+        const d = e.data.data || {}
+        const gameId = String(d.game_id || '').slice(0, 40)
+        const event = d.event === 'start' || d.event === 'complete' ? d.event : null
+        const score = Math.max(0, Math.min(1000000, Number(d.score) || 0))
+        if (BACKEND !== 'supabase' || !me || me.guest || !gameId || !event) return
+        supabase.rpc('gamezone_report', { p_game: gameId, p_event: event, p_score: score }).then(() => {}, () => {})
+      } else if (a === 'gamezoneboard') {
+        const reply = (data) => { try { frame.contentWindow.postMessage({ shellwiseReply: 'gamezoneboard', data }, window.location.origin) } catch { /* frame gone */ } }
+        if (BACKEND !== 'supabase') return reply([])
+        const g = String((e.data.data && e.data.data.game_id) || '').slice(0, 40) || null
+        supabase.rpc('gamezone_leaderboard', { p_game: g }).then(({ data, error }) => reply(error ? [] : (data || [])), () => reply([]))
+      } else if (a === 'gamezoneboardweek') {
+        const reply = (data) => { try { frame.contentWindow.postMessage({ shellwiseReply: 'gamezoneboardweek', data }, window.location.origin) } catch { /* frame gone */ } }
+        if (BACKEND !== 'supabase') return reply([])
+        const g = String((e.data.data && e.data.data.game_id) || '').slice(0, 40) || null
+        supabase.rpc('gamezone_leaderboard_week', { p_game: g }).then(({ data, error }) => reply(error ? [] : (data || [])), () => reply([]))
       } else if (a === 'delete') {
         const reply = (m) => { try { frame.contentWindow.postMessage({ shellwiseReply: 'delete-failed', message: m }, window.location.origin) } catch { /* frame gone */ } }
         deleteAccount().then(() => nav('/', { state: { deleted: true } }), (x) => reply(x.message || 'Could not delete your account.'))

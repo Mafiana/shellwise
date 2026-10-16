@@ -116,11 +116,11 @@
 
     const flags = [f1, f2, f3, f4, f5];
     const hints = [
-      'Level 1: cd ~/secret_hunter/level1 then cat clue.txt',
-      'Level 2: cd ~/secret_hunter/level2 then ls -la and cat .shadow',
-      'Level 3: find ~/secret_hunter/level3 -name vault.key then cat the path it prints',
-      'Level 4: grep flag{ ~/secret_hunter/level4/server.log',
-      'Level 5: ls -la ~/secret_hunter/level5 then explore .classified/ops/ and grep or cat mission.log'
+      'Level 1: Enter level1 and open the file that sounds like a clue.',
+      'Level 2: Some names start with a dot — list all files, then open the shadow one.',
+      'Level 3: Search the level3 tree for a file named like a vault key, then read it.',
+      'Level 4: Scan the server log for an unusual token or flag line.',
+      'Level 5: List everything in level5, including hidden folders, then dig into ops logs.'
     ];
 
     startMission({

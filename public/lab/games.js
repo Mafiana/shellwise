@@ -153,11 +153,20 @@ GAMES.ports=()=>sprint('ports','Port Patrol',45,10,()=>{const [p,n]=pick(PORTS);
 
 // ---------- terminal missions: Log Detective and CTF ----------
 let MS=null;
-const msHud=()=>{if(!MS)return;const q=MS.qs[MS.i];hud(`<b class=hl>${MS.name}</b> · step ${MS.i+1}/${MS.qs.length}<div>${esc(q.p)}</div><div class=dim>Answer with: <b>submit ${esc(q.fmt)}</b> · <b>hint</b> · Ctrl+C quits</div>`)};
-SH.stopMission=()=>{if(!MS)return;const m=MS;MS=null;m.clean();hud('');lesson&&lhud()};
+const msHud=()=>{if(!MS)return;const q=MS.qs[MS.i];hud(`<b class=hl>${MS.name}</b> · step ${MS.i+1}/${MS.qs.length}<div>${esc(q.p)}</div><div class=dim>Answer with: <b>submit ${esc(q.fmt)}</b> · <b>hint</b> · <b>q</b> quits</div>`);try{if(typeof window.swBindMissionHud==='function')window.swBindMissionHud()}catch(e){}};
+SH.stopMission=()=>{if(!MS)return;const m=MS;MS=null;try{if(typeof window.swClearMissionTimer==='function')window.swClearMissionTimer()}catch(e){}m.clean();hud('');lesson&&lhud()};
 function startMission(m){
  if(G||MS)return bad('another game is already running (Ctrl+C to quit)');
- MS=m;m.i=0;m.setup();msHud();P(`<span class=hl>${m.name}</span> started. ${esc(m.intro)}`)}
+ MS=m;m.i=0;m.setup();msHud();P(`<span class=hl>${m.name}</span> started. ${esc(m.intro)}`);
+ if(m.timerMs&&typeof window.swStartMissionTimer==='function'){
+  window.swStartMissionTimer(m.timerMs,function(){
+   if(!MS||MS!==m)return;
+   P('<span class=bad>Time\'s up — mission failed.</span>');
+   try{if(typeof finish==='function')finish(m.id,false,0,m.i)}catch(e){}
+   SH.stopMission();
+  });
+ }
+}
 C.submit=a=>{
  if(!MS)return bad('bash: submit: no mission is running. Try: logdetective or ctf');
  const ans=a.join(' ').trim(),q=MS.qs[MS.i];if(!ans)return bad('usage: submit <answer>');

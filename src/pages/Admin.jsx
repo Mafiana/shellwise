@@ -49,9 +49,10 @@ function useLive(load, ms = 15000, first = true) {
     return () => { clearInterval(t); document.removeEventListener('visibilitychange', tick); window.removeEventListener('focus', tick) }
   }, [load, ms, first])
 }
-const TABS = [['overview', 'Dashboard'], ['users', 'Users'], ['payments', 'Payments'], ['subscriptions', 'Subscriptions'], ['messages', 'Messages'], ['feedback', 'Feedback'], ['tickets', 'Tickets'], ['announcements', 'Announcements'], ['coupons', 'Coupons'], ['gamezone', 'Game Zone'], ['audit', 'Audit log']]
+const TABS = [['overview', 'Dashboard'], ['users', 'Users'], ['payments', 'Payments'], ['prices', 'Prices'], ['subscriptions', 'Subscriptions'], ['messages', 'Messages'], ['feedback', 'Feedback'], ['tickets', 'Tickets'], ['announcements', 'Announcements'], ['coupons', 'Coupons'], ['gamezone', 'Game Zone'], ['audit', 'Audit log']]
 const svg = (d) => <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>
 const ICON = {
+  prices: svg(<><path d="M12 3v18M8 8h6a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h7" /></>),
   overview: svg(<><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v9.5h13V10" /><path d="M10 19.5v-5h4v5" /></>),
   users: svg(<><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" /><path d="M16 4.7a3.5 3.5 0 0 1 0 6.6" /><path d="M18 14.3c2 .7 3.5 2.6 3.5 5.7" /></>),
   payments: svg(<><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><path d="M2.5 10h19" /><path d="M6 15h4" /></>),
@@ -1166,16 +1167,23 @@ function Bell({ onGo }) {
   const live = useRef({})
   live.current = { sound, onGo }
   const load = useCallback(async () => {
-    const [p, m, fb] = await Promise.all([
+    const [p, m, fb, ex] = await Promise.all([
       supabase.from('payments').select('reference,plan,amount_kobo,status,created_at,paid_at').in('status', ['success', 'failed']).order('created_at', { ascending: false }).limit(15),
       supabase.from('contact_messages').select('id,name,topic,created_at').order('created_at', { ascending: false }).limit(15),
       supabase.from('feedback').select('id,user_name,kind,stars,created_at').order('created_at', { ascending: false }).limit(15),
+      supabase.rpc('admin_plans_expiring', { p_days: 7 }).then((r) => r, () => ({ data: [] })),
     ])
     const list = [
       ...(p.data || []).map((x) => ({ k: 'p' + x.reference, tab: 'payments', ok: x.status === 'success', t: x.paid_at || x.created_at, text: (x.status === 'success' ? 'Payment received' : 'Payment failed') + ' · ' + ngn(x.amount_kobo) + ' · ' + (x.plan || '') })),
       ...(m.data || []).map((x) => ({ k: 'm' + x.id, tab: 'messages', ok: true, t: x.created_at, text: 'New message from ' + x.name + ' · ' + (TOPIC[x.topic] || x.topic) })),
       ...(fb.data || []).map((x) => ({ k: 'f' + x.id, tab: 'feedback', ok: true, t: x.created_at, text: 'New ' + (FB_KIND[x.kind] || 'feedback').toLowerCase() + ' from ' + (x.user_name || 'a learner') + (x.stars ? ' · ' + x.stars + '\u2605' : '') })),
-    ].sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 20)
+      ...((() => { const d = ex && ex.data; return Array.isArray(d) ? d : []; })()).map((x) => ({
+        k: 'exp' + (x.user_id || '') + (x.ends_at || ''),
+        tab: 'subscriptions',
+        ok: false,
+        t: x.ends_at || new Date().toISOString(),
+        text: 'Plan ending soon · @' + (x.username || 'user') + ' · ' + (x.plan || '') + ' · ' + (x.days_left != null ? x.days_left + ' day(s) left' : 'soon'),
+      }))].sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 20)
     const fresh = known.current ? list.filter((i) => !known.current.has(i.k)) : []
     known.current = new Set(list.map((i) => i.k))
     setItems(list)
@@ -1586,25 +1594,138 @@ const GZ_NAMES = {
   vault: 'Terminal Vault', detective: 'Detective', rescue1: 'RESCUE 01',
   rescue2: 'RESCUE 02', rescue3: 'RESCUE 03', rescue4: 'RESCUE 04', hunt: 'Secret Hunter',
 }
+
+function PricesAdmin() {
+  const [rows, setRows] = useState(null)
+  const [err, setErr] = useState('')
+  const [ok, setOk] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [edit, setEdit] = useState({}) // id -> { monthly, yearly }
+
+  const load = useCallback(async () => {
+    setErr('')
+    const { data, error } = await supabase.from('plans').select('id,name,monthly_kobo,yearly_kobo').in('id', ['learner', 'pro']).order('id')
+    if (error) {
+      setErr('Could not load plans. Check Supabase plans table.')
+      setRows([])
+      return
+    }
+    setRows(data || [])
+    const e = {}
+    ;(data || []).forEach((r) => {
+      e[r.id] = {
+        monthly: String(Math.round((+r.monthly_kobo || 0) / 100)),
+        yearly: String(Math.round((+r.yearly_kobo || 0) / 100)),
+      }
+    })
+    setEdit(e)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const save = async (id) => {
+    setBusy(true); setErr(''); setOk('')
+    const m = Math.round(parseFloat(edit[id]?.monthly) * 100)
+    const y = Math.round(parseFloat(edit[id]?.yearly) * 100)
+    if (!Number.isFinite(m) || m < 0 || !Number.isFinite(y) || y < 0) {
+      setErr('Enter valid amounts in NGN.'); setBusy(false); return
+    }
+    const { error } = await supabase.rpc('admin_set_plan_price', {
+      p_id: id,
+      p_monthly_kobo: m,
+      p_yearly_kobo: y,
+    })
+    setBusy(false)
+    if (error) {
+      setErr(error.message || 'Could not save. Run upgrade-admin-prices.sql first.')
+      return
+    }
+    setOk(id + ' price updated. New checkouts use this amount. Existing subscribers keep their paid period.')
+    load()
+  }
+
+  if (!rows) return <p className="pnl-dim">Loading prices…</p>
+  return (
+    <div className="pnl-stack">
+      <div className="pnl-card">
+        <h3 style={{ margin: '0 0 8px' }}>Plan prices (NGN)</h3>
+        <p className="pnl-dim" style={{ marginTop: 0 }}>
+          Homepage cards, billing and Paystack checkout all read these amounts from the server.
+          Changing a price applies to <b>new payments only</b>. People already subscribed keep what they paid for until their period ends.
+        </p>
+        {err && <p className="pnl-err">{err}</p>}
+        {ok && <p className="pnl-ok" style={{ color: '#2fd37a' }}>{ok}</p>}
+        <div className="pnl-tw"><table className="pnl-tbl">
+          <thead>
+            <tr><th>Plan</th><th>Monthly (₦)</th><th>Yearly total (₦)</th><th>Per month if yearly</th><th></th></tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const e = edit[r.id] || { monthly: '0', yearly: '0' }
+              const ym = Math.round((parseFloat(e.yearly) || 0) / 12)
+              return (
+                <tr key={r.id}>
+                  <td><b>{r.name || r.id}</b></td>
+                  <td>
+                    <input
+                      type="number" min="0" step="1"
+                      value={e.monthly}
+                      disabled={busy}
+                      onChange={(ev) => setEdit((x) => ({ ...x, [r.id]: { ...e, monthly: ev.target.value } }))}
+                      style={{ width: 110 }}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="number" min="0" step="1"
+                      value={e.yearly}
+                      disabled={busy}
+                      onChange={(ev) => setEdit((x) => ({ ...x, [r.id]: { ...e, yearly: ev.target.value } }))}
+                      style={{ width: 120 }}
+                    />
+                  </td>
+                  <td className="mut">≈ ₦{ym}/mo</td>
+                  <td className="r">
+                    <button type="button" className="pnl-btn pnl-go" disabled={busy} onClick={() => save(r.id)}>
+                      Save
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table></div>
+        <p className="pnl-dim" style={{ marginTop: 14, fontSize: 13 }}>
+          Free stays ₦0. After save, refresh the homepage to see new cards. Paystack charges the new amount on the next checkout.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+
 function GameZoneAdmin() {
   const [feed, setFeed] = useState(null)
   const [board, setBoard] = useState(null)
+  const [weekBoard, setWeekBoard] = useState(null)
   const [stats, setStats] = useState(null)
   const [err, setErr] = useState('')
   const [game, setGame] = useState('all')
   const [q, setQ] = useState('')
   const load = useCallback(async () => {
     setErr('')
-    const [f, b, s] = await Promise.all([
+    const [f, b, w, s] = await Promise.all([
       supabase.rpc('gamezone_admin_feed'),
       supabase.rpc('gamezone_leaderboard', { p_game: game === 'all' ? null : game }),
+      supabase.rpc('gamezone_leaderboard_week', { p_game: game === 'all' ? null : game }).then((r) => r, () => ({ data: [], error: true })),
       supabase.rpc('gamezone_admin_stats').then((r) => r, () => ({ data: null, error: true })),
     ])
     if (f.error) {
-      setErr('Could not load Game Zone. Run supabase/upgrade-gamezone.sql in the SQL Editor, then refresh.')
+      setErr('Could not load Game Zone. Run supabase/upgrade-gamezone-full.sql in the SQL Editor, then refresh.')
       setFeed([])
     } else setFeed(Array.isArray(f.data) ? f.data : [])
     setBoard(!b.error && Array.isArray(b.data) ? b.data : [])
+    setWeekBoard(w && !w.error && Array.isArray(w.data) ? w.data : [])
     setStats(s && !s.error && s.data ? s.data : null)
   }, [game])
   useLive(load, 20000)
@@ -1615,12 +1736,69 @@ function GameZoneAdmin() {
       || String(e.game_id || '').toLowerCase().includes(s)
       || String(e.event || '').toLowerCase().includes(s)
   })
-  if (err) return <p className="pnl-err">{err}</p>
+  const [busy, setBusy] = useState(false)
+  const [okMsg, setOkMsg] = useState('')
+
+  const clearHistory = async (withScores) => {
+    const msg = withScores
+      ? 'Clear ALL Game Zone history and leaderboard scores? This cannot be undone.'
+      : 'Clear live activity history only (leaderboard scores stay)? This cannot be undone.'
+    if (!window.confirm(msg)) return
+    setBusy(true)
+    setErr('')
+    setOkMsg('')
+    const { data, error } = await supabase.rpc('admin_gamezone_clear_history', { p_scores: !!withScores })
+    setBusy(false)
+    if (error) {
+      setErr(error.message || 'Could not clear. Run upgrade-gamezone-clear.sql in Supabase first.')
+      return
+    }
+    const n = data?.events_deleted ?? 0
+    const s = data?.scores_deleted ?? 0
+    setOkMsg(withScores
+      ? `Cleared ${n} events and ${s} score rows.`
+      : `Cleared ${n} activity events. Leaderboard unchanged.`)
+    load()
+  }
+
+  if (err && !feed) return <p className="pnl-err">{err}</p>
   if (!feed) return <p className="pnl-dim">Loading Game Zone…</p>
   const top = board && board[0]
   return (
     <>
       <p className="pnl-dim pnl-sum">Highest scores and live plays from Pro Game Zone. Scores appear when a signed-in learner finishes a mission.</p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', marginBottom: 14 }}>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => clearHistory(false)}
+          style={{
+            background: '#e53935',
+            color: '#fff',
+            border: '1px solid #c62828',
+            borderRadius: 10,
+            padding: '10px 16px',
+            fontWeight: 700,
+            fontSize: 14,
+            cursor: busy ? 'default' : 'pointer',
+            opacity: busy ? 0.6 : 1,
+            fontFamily: 'inherit',
+          }}
+        >
+          {busy ? 'Clearing…' : 'Clear history'}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => clearHistory(true)}
+          className="pnl-btn"
+          style={{ fontSize: 13 }}
+        >
+          Clear history + scores
+        </button>
+        {okMsg && <span style={{ color: '#2fd37a', fontSize: 13 }}>{okMsg}</span>}
+      </div>
+      {err && <p className="pnl-err">{err}</p>}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: 12, marginBottom: 16 }}>
         <Stat label="Plays (24h)" value={stats?.plays_24h ?? '—'} />
         <Stat label="Clears (24h)" value={stats?.completes_24h ?? '—'} />
@@ -1646,6 +1824,23 @@ function GameZoneAdmin() {
                 <td>{r.clears}</td>
                 <td>{r.plan || '—'}</td>
                 <td className="mut">{r.updated_at ? day(r.updated_at) : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table></div>
+      )}
+      <h3 style={{ margin: '20px 0 8px' }}>This week (Top 10)</h3>
+      {!weekBoard || !weekBoard.length ? <p className="pnl-dim">No clears this week yet.</p> : (
+        <div className="pnl-tw"><table className="pnl-tbl">
+          <thead><tr><th>#</th><th>Player</th><th>Game</th><th>Best</th><th>Plan</th></tr></thead>
+          <tbody>
+            {weekBoard.map((r, i) => (
+              <tr key={'w' + (r.game_id || '') + (r.username || '') + i}>
+                <td>{i === 0 ? '🏆' : i + 1}</td>
+                <td><b>@{r.username}</b></td>
+                <td>{GZ_NAMES[r.game_id] || r.game_id}</td>
+                <td><b>{r.best_score}</b></td>
+                <td>{r.plan || '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -1796,6 +1991,7 @@ export default function Admin() {
         {tab === 'tickets' && <Tickets onChange={loadTk} />}
         {tab === 'announcements' && <Announcements />}
         {tab === 'coupons' && <Coupons />}
+        {tab === 'prices' && <PricesAdmin />}
         {tab === 'gamezone' && <GameZoneAdmin />}
         {tab === 'audit' && <Audit />}
       </main>

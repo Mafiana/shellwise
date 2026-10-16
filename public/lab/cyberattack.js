@@ -87,13 +87,13 @@
         {
           p: 'What is the suspicious process name in processes.txt?',
           fmt: '<name>',
-          h: 'Try: cat processes.txt   Look for high CPU under /tmp/',
+          h: 'Read processes.txt — look for high CPU or odd paths.',
           ok: (v) => String(v).toLowerCase() === badProc.toLowerCase()
         },
         {
           p: 'Which IP has the most failed SSH passwords in auth.log?',
           fmt: '<ip>',
-          h: 'Try: grep Failed auth.log',
+          h: 'Search the auth log for failed login lines.',
           ok: (v) => String(v).trim() === attackerIp
         },
         {
