@@ -35,7 +35,7 @@ canvas{border:1px solid var(--blue);background:#12151b;max-width:92vw}
 .opt.right{border-color:var(--ok);color:var(--ok)}.opt.wrong{border-color:var(--bad);color:var(--bad)}
 .badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}.bd{border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center}.bd.off{opacity:.35;filter:grayscale(1)}
 @media(max-width:720px){#side{inset:0 0 auto 0;width:auto;flex-direction:row;overflow-x:auto;padding:calc(6px + env(safe-area-inset-top,0px)) 6px 6px;border-right:0;border-bottom:1px solid var(--line)}#side h1,#sx{display:none}.win{inset:52px 0 0 0;padding-top:0;min-height:0;overflow:hidden}}
-#hud{position:absolute;top:calc(env(safe-area-inset-top,0px) + 40px);right:14px;z-index:40;background:var(--hud);border:1px solid var(--blue);border-radius:8px;padding:8px 12px;max-width:min(380px,72vw);display:none;font-size:13px;line-height:1.5;touch-action:none}
+#hud{position:absolute;top:calc(env(safe-area-inset-top,0px) + 40px);right:14px;z-index:40;background:var(--hud);border:1px solid var(--blue);border-radius:8px;padding:6px 10px;max-width:min(280px,72vw);display:none;font-size:11px;line-height:1.35;touch-action:none}
 #toast{position:fixed;right:14px;bottom:18px;z-index:30;display:flex;flex-direction:column;gap:6px;pointer-events:none}
 #toast div{background:var(--card);border:1px solid var(--ok);padding:8px 12px;border-radius:8px;font-size:13px}
 #side button.prem{color:var(--warn)}#side button.prem.on{background:color-mix(in srgb,var(--warn) 18%,var(--side))}

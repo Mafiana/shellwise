@@ -440,3 +440,83 @@
 }
 
 .gz-week-badge{margin-left:4px;font-size:12px}
+
+
+/* Invite to Play on cards */
+.gz-invite-play{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;margin-top:10px;padding:11px 14px;border-radius:12px;
+  border:1px solid #00f0a855;background:transparent;color:#00f0a8;
+  font:600 13px inherit;cursor:pointer;transition:.15s
+}
+.gz-invite-play:hover{border-color:#00f0a8;background:#00f0a812;box-shadow:0 0 16px #00f0a822}
+.gz-card.gz-red .gz-invite-play{border-color:#ff4d6d66;color:#ff8a9a}
+.gz-card.gz-red .gz-invite-play:hover{border-color:#ff4d6d;background:#ff4d6d14}
+.gz-card.gz-blue .gz-invite-play{border-color:#3dbbff66;color:#3dbbff}
+.gz-card.gz-blue .gz-invite-play:hover{border-color:#3dbbff;background:#3dbbff14}
+.gz-card.gz-purple .gz-invite-play,.gz-card.gz-violet .gz-invite-play{border-color:#b388ff66;color:#b388ff}
+
+/* Invite modal */
+.gz-invite-ov{
+  position:fixed;inset:0;z-index:100050;display:grid;place-items:center;
+  padding:16px;background:rgba(2,8,18,.82);backdrop-filter:blur(6px);
+  box-sizing:border-box
+}
+.gz-invite-card{
+  position:relative;width:min(400px,96vw);max-height:min(90vh,640px);overflow:auto;
+  border-radius:18px;padding:22px 20px 18px;
+  border:1px solid #00f0a855;
+  background:linear-gradient(165deg,#0a1a18,#070d16 55%,#0b1220);
+  box-shadow:0 24px 60px #000c,0 0 40px #00f0a822;
+  color:#e8eefc;font-family:inherit
+}
+.gz-invite-card.gz-inv-red{border-color:#ff4d6d55;box-shadow:0 24px 60px #000c,0 0 36px #ff4d6d22;background:linear-gradient(165deg,#1a0c12,#070d16 55%)}
+.gz-invite-card.gz-inv-blue{border-color:#3dbbff55;box-shadow:0 24px 60px #000c,0 0 36px #3dbbff22;background:linear-gradient(165deg,#0a1420,#070d16 55%)}
+.gz-invite-x{
+  position:absolute;top:10px;right:12px;border:0;background:transparent;
+  color:#9fb0d0;font-size:24px;cursor:pointer;line-height:1
+}
+.gz-invite-kicker{
+  font:700 11px ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:#00f0a8
+}
+.gz-inv-red .gz-invite-kicker{color:#ff6b8a}
+.gz-inv-blue .gz-invite-kicker{color:#3dbbff}
+.gz-invite-card h3{margin:8px 0 10px;font-size:18px;font-weight:800}
+.gz-invite-blurb{margin:0 0 12px;color:#9fb0d0;font-size:13.5px;line-height:1.5}
+.gz-invite-blurb b{color:#00f0a8}
+.gz-invite-players{
+  display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;
+  background:#ffffff0c;border:1px solid #ffffff18;font-size:12px;color:#c8d4ec;margin-bottom:14px
+}
+.gz-inv-dot{width:8px;height:8px;border-radius:50%;background:#00f0a8;box-shadow:0 0 8px #00f0a8}
+.gz-invite-label{
+  display:block;font:700 10px ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;
+  color:#7d8fad;margin-bottom:6px
+}
+.gz-invite-box{
+  border-radius:12px;border:1px solid #00f0a844;background:#041018;padding:12px 14px;margin-bottom:8px;
+  word-break:break-all
+}
+.gz-invite-box code{font:600 12px ui-monospace,monospace;color:#00f0a8}
+.gz-invite-code-row{margin:0 0 14px;font-size:13px;color:#9fb0d0}
+.gz-invite-code-row b{color:#e8eefc;letter-spacing:.04em}
+.gz-invite-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gz-inv-btn{
+  display:flex;align-items:center;justify-content:center;text-align:center;text-decoration:none;
+  padding:12px 10px;border-radius:12px;font:700 13px inherit;cursor:pointer;border:1px solid transparent;
+  color:#fff;box-sizing:border-box
+}
+.gz-inv-btn.primary{background:linear-gradient(135deg,#00f0a8,#00c48a);color:#041018;border:0}
+.gz-inv-btn.wa{background:#128c7e;border-color:#0e7a6e}
+.gz-inv-btn.ghost{background:#ffffff10;border-color:#ffffff28;color:#e8eefc}
+.gz-inv-btn.primary.gz-inv-copied,.gz-inv-copied{background:#00f0a8!important;color:#041018!important}
+.gz-invite-note{margin:14px 0 0;font-size:11.5px;color:#7d8fad;line-height:1.45}
+@media(max-width:420px){
+  .gz-invite-actions{grid-template-columns:1fr}
+  .gz-invite-card{padding:18px 14px 14px}
+}
+
+.gz-inv-btn{gap:8px}
+.gz-inv-ic{flex:none;display:block;opacity:.95}
+.gz-inv-btn.primary .gz-inv-ic{color:#041018}
+.gz-inv-btn.wa .gz-inv-ic{color:#fff}

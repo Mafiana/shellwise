@@ -1712,6 +1712,14 @@ function GameZoneAdmin() {
   const [err, setErr] = useState('')
   const [game, setGame] = useState('all')
   const [q, setQ] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [okMsg, setOkMsg] = useState('')
+  const [clearAsk, setClearAsk] = useState(null) // null | 'events' | 'all'
+  const [page, setPage] = useState(0)
+  const [size, setSize] = useState(20)
+  const [boardPage, setBoardPage] = useState(0)
+  const boardSize = 15
+
   const load = useCallback(async () => {
     setErr('')
     const [f, b, w, s] = await Promise.all([
@@ -1728,35 +1736,41 @@ function GameZoneAdmin() {
     setWeekBoard(w && !w.error && Array.isArray(w.data) ? w.data : [])
     setStats(s && !s.error && s.data ? s.data : null)
   }, [game])
+
   useLive(load, 20000)
-  const filtered = (feed || []).filter((e) => {
-    if (!q.trim()) return true
+
+  const filtered = useMemo(() => {
+    const list = feed || []
+    if (!q.trim()) return list
     const s = q.trim().toLowerCase()
-    return String(e.username || '').toLowerCase().includes(s)
+    return list.filter((e) =>
+      String(e.username || '').toLowerCase().includes(s)
       || String(e.game_id || '').toLowerCase().includes(s)
       || String(e.event || '').toLowerCase().includes(s)
-  })
-  const [busy, setBusy] = useState(false)
-  const [okMsg, setOkMsg] = useState('')
+      || String(e.plan || '').toLowerCase().includes(s)
+    )
+  }, [feed, q])
 
-  const clearHistory = async (withScores) => {
-    const msg = withScores
-      ? 'Clear ALL Game Zone history and leaderboard scores? This cannot be undone.'
-      : 'Clear live activity history only (leaderboard scores stay)? This cannot be undone.'
-    if (!window.confirm(msg)) return
+  useEffect(() => { setPage(0) }, [q, game])
+  useEffect(() => { setBoardPage(0) }, [game])
+
+  const doClear = async () => {
+    if (!clearAsk) return
+    const withScores = clearAsk === 'all'
     setBusy(true)
     setErr('')
     setOkMsg('')
-    const { data, error } = await supabase.rpc('admin_gamezone_clear_history', { p_scores: !!withScores })
+    const { data, error } = await supabase.rpc('admin_gamezone_clear_history', { p_scores: withScores })
     setBusy(false)
+    setClearAsk(null)
     if (error) {
       setErr(error.message || 'Could not clear. Run upgrade-gamezone-clear.sql in Supabase first.')
       return
     }
     const n = data?.events_deleted ?? 0
-    const s = data?.scores_deleted ?? 0
+    const sc = data?.scores_deleted ?? 0
     setOkMsg(withScores
-      ? `Cleared ${n} events and ${s} score rows.`
+      ? `Cleared ${n} events and ${sc} score rows.`
       : `Cleared ${n} activity events. Leaderboard unchanged.`)
     load()
   }
@@ -1764,6 +1778,9 @@ function GameZoneAdmin() {
   if (err && !feed) return <p className="pnl-err">{err}</p>
   if (!feed) return <p className="pnl-dim">Loading Game Zone…</p>
   const top = board && board[0]
+  const boardSlice = (board || []).slice(boardPage * boardSize, boardPage * boardSize + boardSize)
+  const actSlice = filtered.slice(page * size, page * size + size)
+
   return (
     <>
       <p className="pnl-dim pnl-sum">Highest scores and live plays from Pro Game Zone. Scores appear when a signed-in learner finishes a mission.</p>
@@ -1771,7 +1788,7 @@ function GameZoneAdmin() {
         <button
           type="button"
           disabled={busy}
-          onClick={() => clearHistory(false)}
+          onClick={() => setClearAsk('events')}
           style={{
             background: '#e53935',
             color: '#fff',
@@ -1785,12 +1802,12 @@ function GameZoneAdmin() {
             fontFamily: 'inherit',
           }}
         >
-          {busy ? 'Clearing…' : 'Clear history'}
+          Clear history
         </button>
         <button
           type="button"
           disabled={busy}
-          onClick={() => clearHistory(true)}
+          onClick={() => setClearAsk('all')}
           className="pnl-btn"
           style={{ fontSize: 13 }}
         >
@@ -1799,12 +1816,64 @@ function GameZoneAdmin() {
         {okMsg && <span style={{ color: '#2fd37a', fontSize: 13 }}>{okMsg}</span>}
       </div>
       {err && <p className="pnl-err">{err}</p>}
+
+      {clearAsk && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="gz-clear-title"
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200000, display: 'grid', placeItems: 'center',
+            padding: 16, background: 'rgba(4,8,18,.82)', backdropFilter: 'blur(6px)',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget && !busy) setClearAsk(null) }}
+        >
+          <div style={{
+            width: 'min(400px, 94vw)', borderRadius: 16, padding: '22px 20px 18px',
+            border: '1px solid #ff6b6b55', background: 'linear-gradient(165deg,#1a0e14,#0b1220)',
+            boxShadow: '0 24px 60px #000c', color: '#e8eefc', fontFamily: 'inherit',
+          }}>
+            <h3 id="gz-clear-title" style={{ margin: '0 0 10px', fontSize: 18, color: '#ff8a96' }}>
+              {clearAsk === 'all' ? 'Clear history and scores?' : 'Clear activity history?'}
+            </h3>
+            <p style={{ margin: '0 0 18px', color: '#a8b6d4', fontSize: 14, lineHeight: 1.5 }}>
+              {clearAsk === 'all'
+                ? 'This removes all live activity events and leaderboard scores (including weekly). This cannot be undone.'
+                : 'This removes live activity events only. Leaderboard scores stay. This cannot be undone.'}
+            </p>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="pnl-btn"
+                disabled={busy}
+                onClick={() => setClearAsk(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={doClear}
+                style={{
+                  background: '#e53935', color: '#fff', border: '1px solid #c62828',
+                  borderRadius: 10, padding: '10px 16px', fontWeight: 700, fontSize: 14,
+                  cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit', opacity: busy ? 0.7 : 1,
+                }}
+              >
+                {busy ? 'Clearing…' : 'Yes, clear'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: 12, marginBottom: 16 }}>
         <Stat label="Plays (24h)" value={stats?.plays_24h ?? '—'} />
         <Stat label="Clears (24h)" value={stats?.completes_24h ?? '—'} />
         <Stat label="On board" value={stats?.unique_players ?? (board ? board.length : '—')} />
         <Stat label="Top player" value={top ? '@' + top.username : '—'} sub={top ? String(top.best_score) : undefined} />
       </div>
+
       <h3 style={{ margin: '8px 0' }}>Leaderboard</h3>
       <div className="pnl-chips" role="group" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
         {[['all', 'All'], ['secrethunter', 'Hunter'], ['cyberattack', 'Attack'], ['speedrun', 'Speed'], ['vault', 'Vault'], ['detective', 'Detective'], ['rescue1', 'RESCUE 01'], ['rescue2', 'RESCUE 02'], ['rescue3', 'RESCUE 03'], ['rescue4', 'RESCUE 04']].map(([v, t]) => (
@@ -1812,23 +1881,30 @@ function GameZoneAdmin() {
         ))}
       </div>
       {!board || !board.length ? <p className="pnl-dim">No scores yet.</p> : (
-        <div className="pnl-tw"><table className="pnl-tbl">
-          <thead><tr><th>#</th><th>Player</th><th>Game</th><th>Best</th><th>Clears</th><th>Plan</th><th>Updated</th></tr></thead>
-          <tbody>
-            {board.map((r, i) => (
-              <tr key={(r.game_id || '') + (r.username || '') + i}>
-                <td>{i === 0 ? '🏆' : i + 1}</td>
-                <td><b>@{r.username}</b></td>
-                <td>{GZ_NAMES[r.game_id] || r.game_id}</td>
-                <td><b>{r.best_score}</b></td>
-                <td>{r.clears}</td>
-                <td>{r.plan || '—'}</td>
-                <td className="mut">{r.updated_at ? day(r.updated_at) : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
+        <>
+          <div className="pnl-tw"><table className="pnl-tbl">
+            <thead><tr><th>#</th><th>Player</th><th>Game</th><th>Best</th><th>Clears</th><th>Plan</th><th>Updated</th></tr></thead>
+            <tbody>
+              {boardSlice.map((r, i) => {
+                const rank = boardPage * boardSize + i
+                return (
+                  <tr key={(r.game_id || '') + (r.username || '') + rank}>
+                    <td>{rank === 0 ? '🏆' : rank + 1}</td>
+                    <td><b>@{r.username}</b></td>
+                    <td>{GZ_NAMES[r.game_id] || r.game_id}</td>
+                    <td><b>{r.best_score}</b></td>
+                    <td>{r.clears}</td>
+                    <td>{r.plan || '—'}</td>
+                    <td className="mut">{r.updated_at ? day(r.updated_at) : '—'}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table></div>
+          <Pager page={boardPage} size={boardSize} total={board.length} onPage={setBoardPage} onSize={() => {}} />
+        </>
       )}
+
       <h3 style={{ margin: '20px 0 8px' }}>This week (Top 10)</h3>
       {!weekBoard || !weekBoard.length ? <p className="pnl-dim">No clears this week yet.</p> : (
         <div className="pnl-tw"><table className="pnl-tbl">
@@ -1846,28 +1922,66 @@ function GameZoneAdmin() {
           </tbody>
         </table></div>
       )}
+
       <h3 style={{ margin: '20px 0 8px' }}>Live activity</h3>
-      <input className="pnl-q" placeholder="Filter by user, game, event…" value={q} onChange={(e) => setQ(e.target.value)} style={{ marginBottom: 10, maxWidth: 320 }} />
+      <div className="gz-admin-search" style={{
+        display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14,
+        maxWidth: 420, padding: '10px 14px', borderRadius: 12,
+        border: '1px solid #2f8cff44', background: 'linear-gradient(135deg,#0c1528,#0a1220)',
+        boxShadow: '0 0 0 1px #ffffff08, 0 8px 24px #0004',
+      }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2f8cff" strokeWidth="2" strokeLinecap="round" aria-hidden="true" style={{ flex: 'none' }}>
+          <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+        </svg>
+        <input
+          className="pnl-q"
+          placeholder="Search user, game, event, plan…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          aria-label="Filter activity"
+          style={{
+            flex: 1, margin: 0, border: 0, background: 'transparent', outline: 'none',
+            color: '#e8eefc', fontSize: 14, fontFamily: 'inherit', padding: 0, boxShadow: 'none',
+          }}
+        />
+        {q && (
+          <button
+            type="button"
+            onClick={() => setQ('')}
+            aria-label="Clear search"
+            style={{
+              border: 0, background: '#ffffff14', color: '#9fb0d0', borderRadius: 8,
+              width: 28, height: 28, cursor: 'pointer', fontSize: 16, lineHeight: 1, flex: 'none',
+            }}
+          >
+            ×
+          </button>
+        )}
+      </div>
       {!filtered.length ? <p className="pnl-dim">No events match.</p> : (
-        <div className="pnl-tw"><table className="pnl-tbl">
-          <thead><tr><th>When</th><th>User</th><th>Game</th><th>Event</th><th>Score</th><th>Plan</th></tr></thead>
-          <tbody>
-            {filtered.slice(0, 80).map((e) => (
-              <tr key={e.id || String(e.created_at) + e.username}>
-                <td className="nw">{e.created_at ? day(e.created_at) : '—'}<small>{e.created_at ? ago(e.created_at) : ''}</small></td>
-                <td>@{e.username}</td>
-                <td>{GZ_NAMES[e.game_id] || e.game_id}</td>
-                <td>{e.event === 'complete' ? 'Clear' : e.event === 'start' ? 'Start' : e.event}</td>
-                <td>{e.score ?? '—'}</td>
-                <td>{e.plan || '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
+        <>
+          <div className="pnl-tw"><table className="pnl-tbl">
+            <thead><tr><th>When</th><th>User</th><th>Game</th><th>Event</th><th>Score</th><th>Plan</th></tr></thead>
+            <tbody>
+              {actSlice.map((e) => (
+                <tr key={e.id || String(e.created_at) + e.username + e.event}>
+                  <td className="nw">{e.created_at ? day(e.created_at) : '—'}<small>{e.created_at ? ago(e.created_at) : ''}</small></td>
+                  <td>@{e.username}</td>
+                  <td>{GZ_NAMES[e.game_id] || e.game_id}</td>
+                  <td>{e.event === 'complete' ? 'Clear' : e.event === 'start' ? 'Start' : e.event}</td>
+                  <td>{e.score ?? '—'}</td>
+                  <td>{e.plan || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+          <Pager page={page} size={size} total={filtered.length} onPage={setPage} onSize={setSize} />
+        </>
       )}
     </>
   )
 }
+
 
 export default function Admin() {
   const { user, ready, signOut } = useAuth()

@@ -83,6 +83,98 @@
     );
   }
 
+
+  function inviteCode() {
+    const u = loadUser();
+    try {
+      if (u && (u.ref || u.referral || u.invite)) return String(u.ref || u.referral || u.invite);
+      if (u && u.user) return String(u.user).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+    } catch (e) {}
+    return '';
+  }
+
+  function inviteLinkFor(gameId) {
+    const code = inviteCode();
+    const origin = location.origin || '';
+    // Friend signs up with ref, then can open lab / Pro Game Zone for the same challenge
+    let url = origin + '/auth?mode=signup';
+    if (code) url += '&ref=' + encodeURIComponent(code);
+    if (gameId) url += '&game=' + encodeURIComponent(gameId);
+    return url;
+  }
+
+  function inviteLine(gameId, title) {
+    const name = title || 'this ShellWise challenge';
+    const code = inviteCode();
+    return 'Challenge me on ShellWise — ' + name + '!' +
+      (code ? ' Use my invite code ' + code + '.' : '') +
+      ' ' + inviteLinkFor(gameId);
+  }
+
+  function closeInviteModal() {
+    const ov = document.getElementById('gz-invite-ov');
+    if (ov) ov.remove();
+  }
+
+  function openInviteModal(gameId) {
+    closeInviteModal();
+    const g = GAMES.find(function (x) { return x.id === gameId; }) || { title: 'Game Zone', tag: 'Linux challenge', id: gameId || 'game' };
+    const code = inviteCode();
+    const link = inviteLinkFor(g.id);
+    const line = inviteLine(g.id, g.title);
+    const tone = g.tone || 'green';
+
+    if (!code) {
+      if (typeof toast === 'function') toast('Sign in to get your invite link');
+      else alert('Sign in to get your invite link');
+      return;
+    }
+
+    const ov = document.createElement('div');
+    ov.id = 'gz-invite-ov';
+    ov.className = 'gz-invite-ov';
+    ov.innerHTML =
+      '<div class="gz-invite-card gz-inv-' + tone + '" role="dialog" aria-labelledby="gz-inv-title">' +
+        '<button type="button" class="gz-invite-x" id="gz-inv-x" aria-label="Close">×</button>' +
+        '<div class="gz-invite-kicker">Invite a Friend</div>' +
+        '<h3 id="gz-inv-title">' + String(g.title).replace(/[<>]/g, '') + ' · Challenge</h3>' +
+        '<p class="gz-invite-blurb">Challenge a friend to the same Linux mission. They sign up with your link, play, and you both earn progress — they get <b>15% off</b> their first paid plan.</p>' +
+        '<div class="gz-invite-players"><span class="gz-inv-dot"></span> 1 Player · Social challenge</div>' +
+        '<label class="gz-invite-label">Invitation link</label>' +
+        '<div class="gz-invite-box">' +
+          '<code id="gz-inv-link-text">' + link.replace(/[<>]/g, '') + '</code>' +
+        '</div>' +
+        '<p class="gz-invite-code-row">Your code: <b id="gz-inv-code-show">' + String(code).replace(/[<>]/g, '') + '</b></p>' +
+        '<div class="gz-invite-actions">' +
+          '<button type="button" class="gz-inv-btn primary" data-gz-copy-inv="' + link.replace(/"/g, '&quot;') + '"><svg class="gz-inv-ic" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg> Copy invite link</button>' +
+          '<a class="gz-inv-btn wa" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(line) + '"><svg class="gz-inv-ic" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.15 6.4 2.15 11.82c0 1.96.52 3.8 1.44 5.4L2 22l4.96-1.55a9.9 9.9 0 0 0 5.08 1.37h.01c5.46 0 9.89-4.4 9.89-9.82C21.94 6.4 17.5 2 12.04 2zm5.75 13.95c-.24.68-1.4 1.24-1.93 1.32-.5.07-1.13.1-1.82-.11-.42-.13-.96-.31-1.65-.61-2.9-1.26-4.79-4.2-4.93-4.4-.14-.2-1.16-1.54-1.16-2.94 0-1.4.73-2.08.99-2.36.26-.28.57-.35.76-.35h.55c.18 0 .41-.06.64.49.24.56.8 1.95.87 2.09.07.14.12.3.02.49-.1.2-.14.32-.28.49-.14.17-.3.38-.42.51-.14.14-.28.29-.12.56.16.28.71 1.17 1.53 1.9 1.05.93 1.94 1.22 2.21 1.36.28.14.44.12.6-.07.17-.2.7-.81.89-1.09.18-.28.37-.23.62-.14.26.1 1.63.77 1.91.91.28.14.47.21.54.32.07.12.07.68-.17 1.36z"/></svg> WhatsApp</a>' +
+          '<button type="button" class="gz-inv-btn ghost" id="gz-inv-share" data-share-text="' + line.replace(/"/g, '&quot;') + '"><svg class="gz-inv-ic" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98"/></svg> Share…</button>' +
+          '<a class="gz-inv-btn ghost" target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?text=' + encodeURIComponent(line) + '"><svg class="gz-inv-ic" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.74l7.725-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> Post on X</a>' +
+        '</div>' +
+        '<p class="gz-invite-note">Friends open the link, create an account, then play the same challenge in Pro Game Zone.</p>' +
+      '</div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function (e) {
+      if (e.target === ov) closeInviteModal();
+    });
+    document.getElementById('gz-inv-x').onclick = closeInviteModal;
+
+    const shareBtn = document.getElementById('gz-inv-share');
+    if (shareBtn) {
+      shareBtn.onclick = function () {
+        const text = shareBtn.getAttribute('data-share-text') || line;
+        if (navigator.share) {
+          navigator.share({ title: 'ShellWise · ' + g.title, text: text, url: link }).catch(function () {});
+        } else {
+          // fallback: copy
+          const btn = ov.querySelector('[data-gz-copy-inv]');
+          if (btn) btn.click();
+        }
+      };
+    }
+  }
+
+
   function card(g) {
     const open = canPlay(g);
     const tags = g.tags.map(function (t) { return '<span class="gz-tag">' + t + '</span>'; }).join('');
@@ -101,6 +193,7 @@
           '<p class="gz-desc">' + g.body + '</p>' +
           '<div class="gz-tags">' + tags + '</div>' +
           '<div class="gz-ft"><span class="gz-xp">★ ' + g.xp + ' XP</span>' + btn + '</div>' +
+          '<button type="button" class="gz-invite-play" data-gz-invite="' + g.id + '">👥 Invite to Play</button>' +
         '</div></article>'
     );
   }
@@ -427,6 +520,50 @@
   };
 
   document.addEventListener('click', function (e) {
+
+    const invPlay = e.target.closest && e.target.closest('[data-gz-invite]');
+    if (invPlay) {
+      e.preventDefault();
+      e.stopPropagation();
+      openInviteModal(invPlay.getAttribute('data-gz-invite'));
+      return;
+    }
+    // Copy from invite modal
+    const invModalCopy = e.target.closest && e.target.closest('[data-gz-copy-inv]');
+    if (invModalCopy) {
+      e.preventDefault();
+      e.stopPropagation();
+      const text = invModalCopy.getAttribute('data-gz-copy-inv') || '';
+      const done = function () {
+        if (!invModalCopy.getAttribute('data-label-html')) {
+          invModalCopy.setAttribute('data-label-html', invModalCopy.innerHTML);
+        }
+        invModalCopy.innerHTML = '<span class="gz-inv-ic" aria-hidden="true">✓</span> Copied!';
+        invModalCopy.classList.add('gz-inv-copied');
+        setTimeout(function () {
+          invModalCopy.innerHTML = invModalCopy.getAttribute('data-label-html') || 'Copy invite link';
+          invModalCopy.classList.remove('gz-inv-copied');
+        }, 2000);
+        if (typeof toast === 'function') toast('Invite link copied');
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () {
+          try {
+            const ta = document.createElement('textarea');
+            ta.value = text; document.body.appendChild(ta); ta.select();
+            document.execCommand('copy'); document.body.removeChild(ta); done();
+          } catch (err) {}
+        });
+      } else {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); document.body.removeChild(ta); done();
+        } catch (err) {}
+      }
+      return;
+    }
+
     const pbtn = e.target.closest && e.target.closest('#gz-profile-btn');
     if (pbtn) {
       e.preventDefault();

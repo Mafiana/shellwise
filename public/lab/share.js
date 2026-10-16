@@ -52,6 +52,8 @@
   font:700 13px system-ui,sans-serif;cursor:pointer;text-decoration:none;color:#041018;background:#00f0a8
 }
 .sw-share-act .ghost{background:transparent;color:#e8eefc;border:1px solid #ffffff33}
+.sw-share-act .sw-share-close-btn,.sw-share-act button#sw-share-close{background:#e53935;color:#fff;border:1px solid #c62828;font-weight:700}
+.sw-share-act .sw-share-close-btn:hover,button#sw-share-close:hover{background:#c62828;filter:brightness(1.05)}
 .sw-share-x{position:absolute;top:10px;right:12px;border:0;background:transparent;color:#9fb0d0;font-size:22px;cursor:pointer}
 .sw-share-wrap{position:relative}
 `;
@@ -102,7 +104,7 @@
           '<button type="button" id="sw-share-copy">Copy text</button>' +
           '<a href="' + esc(tweet) + '" target="_blank" rel="noopener">Post on X</a>' +
           '<a class="ghost" href="' + esc(wa) + '" target="_blank" rel="noopener">WhatsApp</a>' +
-          '<button type="button" class="ghost" id="sw-share-close">Close</button>' +
+          '<button type="button" class="sw-share-close-btn" id="sw-share-close">Close</button>' +
         '</div>' +
       '</div>';
     document.body.appendChild(ov);
